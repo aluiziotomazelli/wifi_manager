@@ -65,3 +65,7 @@ Note: Running the tests requires a target ESP32 board.
 ## License
 
 MIT
+
+## Credits
+
+- **Google Jules** - Revision architecture and testing framework
