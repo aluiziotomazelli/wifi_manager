@@ -4,8 +4,6 @@
 cmake_minimum_required(VERSION 3.16)
 
 list(APPEND EXTRA_COMPONENT_DIRS "..")
-# list(APPEND EXTRA_COMPONENT_DIRS "../..")
-# list(APPEND EXTRA_COMPONENT_DIRS "../../gpio_validator")
 
 add_compile_definitions(UNIT_TEST)
 

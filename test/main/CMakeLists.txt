@@ -12,9 +12,8 @@ idf_component_register(
         nvs_flash
         esp_timer
         esp_wifi
-    WHOLE_ARCHIVE
+    WHOLE_ARCHIVE # needed for unity test compile tests
 
-    
 )
 
 

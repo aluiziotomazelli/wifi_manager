@@ -1,11 +1,14 @@
-#include "wifi_manager.hpp"
+#include <cstring>
+
 #include "esp_event.h"
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
-#include <cstring>
+
+#include "wifi_manager.hpp"
 
 static const char *TAG = "WiFiManager";
 
@@ -347,7 +350,7 @@ esp_err_t WiFiManager::start(uint32_t timeout_ms)
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "API: Requesting to start WiFi (sync)...");
+    ESP_LOGD(TAG, "API: Requesting to start WiFi (sync)...");
     Command cmd = {};
     cmd.id      = CommandId::START;
 
@@ -384,7 +387,7 @@ esp_err_t WiFiManager::start()
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "API: Requesting to start WiFi (async)...");
+    ESP_LOGD(TAG, "API: Requesting to start WiFi (async)...");
     Command cmd = {};
     cmd.id      = CommandId::START;
     return send_command(cmd, true);
@@ -428,7 +431,7 @@ esp_err_t WiFiManager::stop()
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "API: Requesting to stop WiFi (async)...");
+    ESP_LOGD(TAG, "API: Requesting to stop WiFi (async)...");
     Command cmd = {};
     cmd.id      = CommandId::STOP;
     return send_command(cmd, true);
@@ -440,7 +443,7 @@ esp_err_t WiFiManager::connect(uint32_t timeout_ms)
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "API: Requesting to connect (sync)...");
+    ESP_LOGD(TAG, "API: Requesting to connect (sync)...");
     Command cmd = {};
     cmd.id      = CommandId::CONNECT;
 
@@ -478,7 +481,7 @@ esp_err_t WiFiManager::connect()
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "API: Requesting to connect (async)...");
+    ESP_LOGD(TAG, "API: Requesting to connect (async)...");
     Command cmd = {};
     cmd.id      = CommandId::CONNECT;
     return send_command(cmd, true);
@@ -490,7 +493,7 @@ esp_err_t WiFiManager::disconnect(uint32_t timeout_ms)
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "API: Requesting to disconnect (sync)...");
+    ESP_LOGD(TAG, "API: Requesting to disconnect (sync)...");
     Command cmd = {};
     cmd.id      = CommandId::DISCONNECT;
 
@@ -523,7 +526,7 @@ esp_err_t WiFiManager::disconnect()
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "API: Requesting to disconnect (async)...");
+    ESP_LOGD(TAG, "API: Requesting to disconnect (async)...");
     Command cmd = {};
     cmd.id      = CommandId::DISCONNECT;
     return send_command(cmd, true);
@@ -574,8 +577,8 @@ esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::strin
 
     esp_err_t err = esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
     if (err == ESP_OK) {
-        retry_count          = 0;
-        suspect_retry_count  = 0;
+        retry_count         = 0;
+        suspect_retry_count = 0;
         save_valid_flag(true);
         ESP_LOGI(TAG, "Credentials applied successfully.");
     }
@@ -624,8 +627,8 @@ esp_err_t WiFiManager::clear_credentials()
 
     err = esp_wifi_set_config(WIFI_IF_STA, &saved_config);
     if (err == ESP_OK) {
-        retry_count          = 0;
-        suspect_retry_count  = 0;
+        retry_count         = 0;
+        suspect_retry_count = 0;
         save_valid_flag(false);
     }
     xSemaphoreGiveRecursive(state_mutex);
@@ -650,10 +653,10 @@ esp_err_t WiFiManager::factory_reset()
         nvs_close(h);
     }
 
-    is_credential_valid  = false;
-    retry_count          = 0;
-    suspect_retry_count  = 0;
-    current_state        = State::INITIALIZED;
+    is_credential_valid = false;
+    retry_count         = 0;
+    suspect_retry_count = 0;
+    current_state       = State::INITIALIZED;
 
     xSemaphoreGiveRecursive(state_mutex);
     return ESP_OK;
@@ -760,8 +763,8 @@ void WiFiManager::wifi_task(void *pvParameters)
 
             // Any explicit user command resets the retry counters
             if (cmd.id != CommandId::HANDLE_EVENT_WIFI && cmd.id != CommandId::HANDLE_EVENT_IP) {
-                self->retry_count          = 0;
-                self->suspect_retry_count  = 0;
+                self->retry_count         = 0;
+                self->suspect_retry_count = 0;
             }
 
             switch (cmd.id) {
@@ -1000,7 +1003,7 @@ void WiFiManager::wifi_task(void *pvParameters)
                 // Handle events from the WiFi driver and transition states accordingly
                 switch (cmd.event_id) {
                 case WIFI_EVENT_STA_START:
-                    ESP_LOGI(TAG, "Task Event: STA_START");
+                    ESP_LOGD(TAG, "Task Event: STA_START");
                     if (self->current_state == State::STARTING) {
                         self->current_state = State::STARTED;
                         xEventGroupSetBits(self->wifi_event_group, STARTED_BIT);
@@ -1010,7 +1013,7 @@ void WiFiManager::wifi_task(void *pvParameters)
                     }
                     break;
                 case WIFI_EVENT_STA_STOP:
-                    ESP_LOGI(TAG, "Task Event: STA_STOP");
+                    ESP_LOGD(TAG, "Task Event: STA_STOP");
                     if (self->current_state == State::STOPPING) {
                         self->current_state = State::STOPPED;
                         xEventGroupSetBits(self->wifi_event_group, STOPPED_BIT);
@@ -1020,7 +1023,7 @@ void WiFiManager::wifi_task(void *pvParameters)
                     }
                     break;
                 case WIFI_EVENT_STA_CONNECTED:
-                    ESP_LOGI(TAG, "Task Event: STA_CONNECTED");
+                    ESP_LOGD(TAG, "Task Event: STA_CONNECTED");
                     if (self->current_state == State::CONNECTING) {
                         self->current_state = State::CONNECTED_NO_IP;
                     }

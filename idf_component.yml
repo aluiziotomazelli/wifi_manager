@@ -2,6 +2,7 @@
 version: "1.0.0"
 description: "A robust, thread-safe WiFi Station manager for ESP-IDF."
 maintainers:
+  - "https://github.com/aluiziotomazelli"
   - "Jules <jules@example.com>"
 license: "MIT"
 tags:
@@ -20,12 +21,14 @@ dependencies:
   idf: ">=5.0"
 
 files:
+  use_gitignore: true
   exclude:
     - "test/main/secrets.h"
 
 examples:
   - path: "test"
 
-url: "https://example.com/wifi_manager"
-repository: "https://github.com/example/wifi_manager"
-documentation: "https://example.com/wifi_manager/docs"
+
+url: "https://github.com/aluiziotomazelli/wifi_manager"
+repository: "https://github.com/aluiziotomazelli/wifi_manager"
+
