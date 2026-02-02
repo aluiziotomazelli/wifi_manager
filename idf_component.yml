@@ -1,0 +1,31 @@
+# WiFiManager Component Manifest
+version: "1.0.0"
+description: "A robust, thread-safe WiFi Station manager for ESP-IDF."
+maintainers:
+  - "Jules <jules@example.com>"
+license: "MIT"
+tags:
+  - wifi
+  - manager
+  - station
+  - esp32
+  - cpp
+
+targets:
+  - esp32
+  - esp32s3
+  - esp32c3
+
+dependencies:
+  idf: ">=5.0"
+
+files:
+  exclude:
+    - "test/main/secrets.h"
+
+examples:
+  - path: "test"
+
+url: "https://example.com/wifi_manager"
+repository: "https://github.com/example/wifi_manager"
+documentation: "https://example.com/wifi_manager/docs"

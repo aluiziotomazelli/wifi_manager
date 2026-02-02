@@ -1,0 +1,33 @@
+# Build directories - IGNORA EM QUALQUER NÍVEL
+**/build/
+**/.cmake/
+**/sdkconfig
+**/sdkconfig.old
+**/compile_commands.json
+
+# IDE files
+**/.vscode/
+**/.idea/
+**/*.swp
+**/*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# ESP-IDF specific
+**/managed_components/
+**/dependencies.lock
+**/flash_app_args
+**/flash_project_args
+**/config/sdkconfig.json
+
+# App específico (se quiser)
+app_*/build/
+app_*/sdkconfig
+*.bak
+.clangd
+**/.cache/
+*.log
+**/secrets.h
+**/secrets.hpp
