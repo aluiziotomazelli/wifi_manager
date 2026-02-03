@@ -1,5 +1,7 @@
 # WiFiManager Component
 
+[![Component Registry](https://components.espressif.com/components/aluiziotomazelli/wifi_manager/badge.svg)](https://components.espressif.com/components/aluiziotomazelli/wifi_manager)
+
 A robust, thread-safe WiFi Station manager for ESP-IDF (v5.x).
 
 ## Overview
