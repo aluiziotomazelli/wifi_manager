@@ -5,6 +5,9 @@
 **/sdkconfig.old
 **/compile_commands.json
 
+# Build artifacts
+dist/
+
 # IDE files
 **/.vscode/
 **/.idea/
@@ -22,7 +25,7 @@ Thumbs.db
 **/flash_project_args
 **/config/sdkconfig.json
 
-# App específico (se quiser)
+# App
 app_*/build/
 app_*/sdkconfig
 *.bak
