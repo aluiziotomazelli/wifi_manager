@@ -52,6 +52,14 @@ void app_main() {
 
 For a full technical reference of all methods and states, see the [API Reference](API.md).
 
+## Current limitations
+At the moment:
+- The component does not implement provisioning. The ssid and pass are hardcoded, either by Kconfig or by the code itself (in `main.cpp` or in `secrets.h`)
+- Task priority is still fixed in **5**, future implements needed to make it configurable
+- No signal quality evaluation:  
+  - There is no RSSI-based logic to distinguish very weak signal conditions.
+  - The `WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT` usually occurs when the access point aborts the handshake due to invalid credentials. Currently, it is treated **only** as an authentication failure, even though in practice it may also occur under marginal signal conditions.
+
 ## Unit Testing
 
 This component includes a comprehensive test suite with over 40 test cases covering:

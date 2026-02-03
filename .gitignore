@@ -1,4 +1,4 @@
-# Build directories - IGNORA EM QUALQUER NÍVEL
+# Build directories
 **/build/
 **/.cmake/
 **/sdkconfig
@@ -26,8 +26,6 @@ Thumbs.db
 **/config/sdkconfig.json
 
 # App
-app_*/build/
-app_*/sdkconfig
 *.bak
 .clangd
 **/.cache/

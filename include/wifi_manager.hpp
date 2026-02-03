@@ -7,11 +7,12 @@
  * @version 1.1.0
  */
 
+#include <cstdint>
+#include <string>
+
 #include "esp_err.h"
 #include "esp_event.h"
 #include "esp_netif.h"
-#include <cstdint>
-#include <string>
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
