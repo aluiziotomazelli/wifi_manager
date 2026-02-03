@@ -2,8 +2,7 @@
 version: "1.0.0"
 description: "A robust, thread-safe WiFi Station manager for ESP-IDF."
 maintainers:
-  - name: "Aluizio Tomazelli"
-    github: "aluiziotomazelli"
+  - "aluiziotomazelli"
   
 
 license: "MIT"
