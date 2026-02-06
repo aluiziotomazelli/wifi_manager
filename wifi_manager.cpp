@@ -10,7 +10,9 @@
 
 #include "wifi_manager.hpp"
 
-static const char *TAG = "WiFiManager";
+static const char *TAG         = "WiFiManager";
+constexpr int8_t RSSI_CRITICAL = -85;
+constexpr int8_t RSSI_GOOD     = -65;
 
 // =================================================================================================
 // Singleton and Constructor/Destructor
@@ -262,7 +264,7 @@ esp_err_t WiFiManager::deinit()
     }
 
     // 1. Ensure WiFi is stopped before deinitializing the stack
-    if (state >= State::STARTING && state < State::STOPPING) {
+    if ((uint32_t)state & IS_ACTIVE_MASK) {
         ESP_LOGI(TAG, "WiFi is running, stopping first...");
         stop(2000);
     }
@@ -346,11 +348,22 @@ esp_err_t WiFiManager::deinit()
 
 esp_err_t WiFiManager::start(uint32_t timeout_ms)
 {
-    if (get_state() == State::UNINITIALIZED || !wifi_event_group || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::START, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!wifi_event_group || !command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGD(TAG, "API: Requesting to start WiFi (sync)...");
+
+    // Idempotency: skip if already in an active/started state
+    if (!((uint32_t)state & CAN_START_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::START;
 
@@ -383,11 +396,22 @@ esp_err_t WiFiManager::start(uint32_t timeout_ms)
 
 esp_err_t WiFiManager::start()
 {
-    if (get_state() == State::UNINITIALIZED || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::START, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGD(TAG, "API: Requesting to start WiFi (async)...");
+
+    // Idempotency: skip if already in an active/started state
+    if (!((uint32_t)state & CAN_START_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::START;
     return send_command(cmd, true);
@@ -395,11 +419,22 @@ esp_err_t WiFiManager::start()
 
 esp_err_t WiFiManager::stop(uint32_t timeout_ms)
 {
-    if (get_state() == State::UNINITIALIZED || !wifi_event_group || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::STOP, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!wifi_event_group || !command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGI(TAG, "API: Requesting to stop WiFi (sync)...");
+
+    // Idempotency: skip if already stopped
+    if (!((uint32_t)state & CAN_STOP_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::STOP;
 
@@ -427,11 +462,22 @@ esp_err_t WiFiManager::stop(uint32_t timeout_ms)
 
 esp_err_t WiFiManager::stop()
 {
-    if (get_state() == State::UNINITIALIZED || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::STOP, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGD(TAG, "API: Requesting to stop WiFi (async)...");
+
+    // Idempotency: skip if already stopped
+    if (!((uint32_t)state & CAN_STOP_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::STOP;
     return send_command(cmd, true);
@@ -439,11 +485,22 @@ esp_err_t WiFiManager::stop()
 
 esp_err_t WiFiManager::connect(uint32_t timeout_ms)
 {
-    if (get_state() == State::UNINITIALIZED || !wifi_event_group || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::CONNECT, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!wifi_event_group || !command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGD(TAG, "API: Requesting to connect (sync)...");
+
+    // Idempotency: skip if already connecting or connected
+    if (!((uint32_t)state & CAN_CONNECT_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::CONNECT;
 
@@ -477,11 +534,22 @@ esp_err_t WiFiManager::connect(uint32_t timeout_ms)
 
 esp_err_t WiFiManager::connect()
 {
-    if (get_state() == State::UNINITIALIZED || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::CONNECT, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGD(TAG, "API: Requesting to connect (async)...");
+
+    // Idempotency: skip if already connecting or connected
+    if (!((uint32_t)state & CAN_CONNECT_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::CONNECT;
     return send_command(cmd, true);
@@ -489,11 +557,22 @@ esp_err_t WiFiManager::connect()
 
 esp_err_t WiFiManager::disconnect(uint32_t timeout_ms)
 {
-    if (get_state() == State::UNINITIALIZED || !wifi_event_group || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::DISCONNECT, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!wifi_event_group || !command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGD(TAG, "API: Requesting to disconnect (sync)...");
+
+    // Idempotency: skip if already disconnected
+    if (!((uint32_t)state & CAN_DISCONNECT_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::DISCONNECT;
 
@@ -522,11 +601,22 @@ esp_err_t WiFiManager::disconnect(uint32_t timeout_ms)
 
 esp_err_t WiFiManager::disconnect()
 {
-    if (get_state() == State::UNINITIALIZED || !command_queue) {
+    State state          = get_state();
+    esp_err_t validation = validate_command(CommandId::DISCONNECT, state);
+    if (validation != ESP_OK) {
+        return validation;
+    }
+
+    if (!command_queue) {
         return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGD(TAG, "API: Requesting to disconnect (async)...");
+
+    // Idempotency: skip if already disconnected
+    if (!((uint32_t)state & CAN_DISCONNECT_MASK)) {
+        return ESP_OK;
+    }
     Command cmd = {};
     cmd.id      = CommandId::DISCONNECT;
     return send_command(cmd, true);
@@ -556,7 +646,7 @@ esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::strin
     ESP_LOGI(TAG, "API: Setting credentials...");
 
     // If we are currently active, we must stop the current connection first
-    if (current_state >= State::CONNECTING && current_state < State::STOPPING) {
+    if ((uint32_t)current_state & IS_ACTIVE_MASK) {
         ESP_LOGI(TAG, "Disconnecting before applying new credentials...");
         esp_wifi_disconnect();
     }
@@ -710,6 +800,331 @@ esp_err_t WiFiManager::send_command(const Command &cmd, bool is_async)
     return ESP_OK;
 }
 
+void WiFiManager::process_command(const Command &cmd, State state)
+{
+    // Any explicit user command resets the retry counters
+    if (cmd.id != CommandId::HANDLE_EVENT_WIFI && cmd.id != CommandId::HANDLE_EVENT_IP &&
+        cmd.id != CommandId::EXIT) {
+        this->retry_count         = 0;
+        this->suspect_retry_count = 0;
+    }
+
+    switch (cmd.id) {
+    case CommandId::START:
+        handle_start(cmd, state);
+        break;
+    case CommandId::STOP:
+        handle_stop(cmd, state);
+        break;
+    case CommandId::CONNECT:
+        handle_connect(cmd, state);
+        break;
+    case CommandId::DISCONNECT:
+        handle_disconnect(cmd, state);
+        break;
+    case CommandId::HANDLE_EVENT_WIFI:
+        handle_wifi_event(cmd, state);
+        break;
+    case CommandId::HANDLE_EVENT_IP:
+        handle_ip_event(cmd, state);
+        break;
+    default:
+        break;
+    }
+}
+
+void WiFiManager::handle_start(const Command &cmd, State state)
+{
+    if (this->validate_command(cmd.id, state) != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot start WiFi in current state: %d", (int)state);
+        xEventGroupSetBits(this->wifi_event_group, INVALID_STATE_BIT);
+        return;
+    }
+
+    // If already operational or starting, just signal success for sync APIs
+    if ((uint32_t)state & (IS_STA_READY_MASK | (uint32_t)State::STARTING)) {
+        xEventGroupSetBits(this->wifi_event_group, STARTED_BIT);
+        return;
+    }
+
+    // Normal transition: Valid states for start operation (INITIALIZED/STOPPED)
+    this->current_state = State::STARTING;
+    esp_err_t err       = esp_wifi_start();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start wifi: %s", esp_err_to_name(err));
+        this->current_state = state;
+        xEventGroupSetBits(this->wifi_event_group, START_FAILED_BIT);
+    }
+}
+
+void WiFiManager::handle_stop(const Command &cmd, State state)
+{
+    if (this->validate_command(cmd.id, state) != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot stop WiFi in current state: %d", (int)state);
+        xEventGroupSetBits(this->wifi_event_group, INVALID_STATE_BIT);
+        return;
+    }
+
+    // If already stopped or stopping, signal success
+    if ((uint32_t)state & ((uint32_t)State::STOPPED | (uint32_t)State::STOPPING)) {
+        xEventGroupSetBits(this->wifi_event_group, STOPPED_BIT);
+        return;
+    }
+
+    // Normal transition: Valid states for stop operation
+    this->current_state = State::STOPPING;
+    esp_err_t err       = esp_wifi_stop();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to stop wifi: %s", esp_err_to_name(err));
+        this->current_state = state;
+        xEventGroupSetBits(this->wifi_event_group, STOP_FAILED_BIT);
+    }
+}
+
+void WiFiManager::handle_connect(const Command &cmd, State state)
+{
+    if (this->validate_command(cmd.id, state) != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot connect in current state: %d", (int)state);
+        xEventGroupSetBits(this->wifi_event_group, INVALID_STATE_BIT);
+        return;
+    }
+
+    // If already connecting or connected, signal success
+    if ((uint32_t)state & ((uint32_t)State::CONNECTING | IS_CONNECTED_MASK)) {
+        if ((uint32_t)state & IS_CONNECTED_MASK) {
+            xEventGroupSetBits(this->wifi_event_group, CONNECTED_BIT);
+        }
+        return;
+    }
+
+    // Normal transition: Valid states for connect operation
+    this->current_state = State::CONNECTING;
+    esp_err_t err       = esp_wifi_connect();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to connect wifi: %s", esp_err_to_name(err));
+        this->current_state = state;
+        xEventGroupSetBits(this->wifi_event_group, CONNECT_FAILED_BIT);
+    }
+}
+
+void WiFiManager::handle_disconnect(const Command &cmd, State state)
+{
+    if (this->validate_command(cmd.id, state) != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot disconnect in current state: %d", (int)state);
+        xEventGroupSetBits(this->wifi_event_group, INVALID_STATE_BIT);
+        return;
+    }
+
+    // If already disconnected or disconnecting, signal success
+    if ((uint32_t)state & ((uint32_t)State::DISCONNECTED | (uint32_t)State::DISCONNECTING)) {
+        xEventGroupSetBits(this->wifi_event_group, DISCONNECTED_BIT);
+        return;
+    }
+
+    // SPECIAL CASE: Rollback during early connect phase or backoff.
+    if (state == State::WAITING_RECONNECT || state == State::CONNECTING) {
+        this->current_state = State::DISCONNECTED;
+        esp_wifi_disconnect();
+        xEventGroupSetBits(this->wifi_event_group, DISCONNECTED_BIT);
+        return;
+    }
+
+    // Normal transition: Valid states
+    this->current_state = State::DISCONNECTING;
+    esp_err_t err       = esp_wifi_disconnect();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to disconnect wifi: %s", esp_err_to_name(err));
+        this->current_state = state;
+        xEventGroupSetBits(this->wifi_event_group, CONNECT_FAILED_BIT);
+    }
+}
+
+void WiFiManager::handle_wifi_event(const Command &cmd, State state)
+{
+    // Handle events from the WiFi driver and transition states accordingly
+    switch (cmd.event_id) {
+    case WIFI_EVENT_STA_START:
+        ESP_LOGD(TAG, "Task Event: STA_START");
+        if (state == State::STARTING) {
+            this->current_state = State::STARTED;
+            xEventGroupSetBits(this->wifi_event_group, STARTED_BIT);
+        }
+        else {
+            ESP_LOGW(TAG, "STA_START ignored in state %d", (int)state);
+        }
+        break;
+    case WIFI_EVENT_STA_STOP:
+        ESP_LOGD(TAG, "Task Event: STA_STOP");
+        if (state == State::STOPPING) {
+            this->current_state = State::STOPPED;
+            xEventGroupSetBits(this->wifi_event_group, STOPPED_BIT);
+        }
+        else {
+            ESP_LOGW(TAG, "STA_STOP ignored in state %d", (int)state);
+        }
+        break;
+    case WIFI_EVENT_STA_CONNECTED:
+        ESP_LOGD(TAG, "Task Event: STA_CONNECTED");
+        if (state == State::CONNECTING) {
+            this->current_state = State::CONNECTED_NO_IP;
+        }
+        else {
+            ESP_LOGW(TAG, "STA_CONNECTED ignored in state %d", (int)state);
+        }
+        break;
+    case WIFI_EVENT_STA_DISCONNECTED:
+    {
+        const char *quality =
+            (cmd.rssi <= RSSI_CRITICAL) ? "CRITICAL" : (cmd.rssi >= RSSI_GOOD ? "GOOD" : "MEDIUM");
+        ESP_LOGI(TAG, "Task Event: STA_DISCONNECTED (reason: %d, RSSI=%d dBm [%s])", cmd.reason,
+                 cmd.rssi, quality);
+
+        // Ignore if driver is not supposed to be running
+        if (!((uint32_t)state & IS_ACTIVE_MASK)) {
+            ESP_LOGW(TAG, "STA_DISCONNECTED ignored in state %d", (int)state);
+            break;
+        }
+
+        // Case 1: Disconnection was intended (via API)
+        if (state == State::DISCONNECTING || state == State::STOPPING) {
+            if (state == State::DISCONNECTING) {
+                this->current_state = State::DISCONNECTED;
+            }
+            // If STOPPING, we stay in STOPPING until WIFI_EVENT_STA_STOP
+            xEventGroupSetBits(this->wifi_event_group, DISCONNECTED_BIT | CONNECT_FAILED_BIT);
+        }
+        // Case 1: Intentional disconnect
+        else if (cmd.reason == WIFI_REASON_ASSOC_LEAVE) {
+            ESP_LOGI(TAG, "Disconnected (Reason: ASSOC_LEAVE).");
+            this->current_state = State::DISCONNECTED;
+            xEventGroupSetBits(this->wifi_event_group, DISCONNECTED_BIT | CONNECT_FAILED_BIT);
+        }
+        // Case 2: Definite credential failure
+        else if (cmd.reason == WIFI_REASON_AUTH_FAIL ||
+                 cmd.reason == WIFI_REASON_802_1X_AUTH_FAILED ||
+                 cmd.reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT ||
+                 cmd.reason == WIFI_REASON_HANDSHAKE_TIMEOUT) {
+            ESP_LOGE(TAG, "Authentication failed (Reason: %d).", cmd.reason);
+            this->current_state = State::ERROR_CREDENTIALS;
+            this->save_valid_flag(false);
+            xEventGroupSetBits(this->wifi_event_group, CONNECT_FAILED_BIT);
+        }
+        // Case 3: Suspect credential failure
+        else if (cmd.reason == WIFI_REASON_CONNECTION_FAIL) {
+            this->suspect_retry_count++;
+            ESP_LOGW(TAG, "Suspect failure %lu/3 (Reason: %d).",
+                     (unsigned long)this->suspect_retry_count, cmd.reason);
+
+            if (this->suspect_retry_count >= 3) {
+                ESP_LOGE(TAG, "Too many suspect failures. Invalidating credentials.");
+                this->current_state = State::ERROR_CREDENTIALS;
+                this->save_valid_flag(false);
+            }
+            else {
+                this->current_state = State::WAITING_RECONNECT;
+                this->retry_count++;
+                uint32_t delay_ms = 1000 * (1 << (this->retry_count - 1));
+                if (delay_ms > 300000)
+                    delay_ms = 300000;
+                this->next_reconnect_ms = (esp_timer_get_time() / 1000) + delay_ms;
+            }
+            xEventGroupSetBits(this->wifi_event_group, CONNECT_FAILED_BIT);
+        }
+        // Case 4: Recoverable failure
+        else {
+            if (this->is_credential_valid) {
+                this->current_state = State::WAITING_RECONNECT;
+                this->retry_count++;
+
+                uint32_t delay_ms = 1000; // First retry after 1s
+                if (this->retry_count > 1) {
+                    // Exponential backoff: 2s, 4s, 8s... max 300s (5 min)
+                    delay_ms = (1 << (this->retry_count - 1)) * 1000;
+                    if (delay_ms > 300000)
+                        delay_ms = 300000;
+                }
+                this->next_reconnect_ms = (esp_timer_get_time() / 1000) + delay_ms;
+
+                ESP_LOGI(TAG, "Reconnection attempt %lu in %lu ms...",
+                         (unsigned long)this->retry_count, (unsigned long)delay_ms);
+            }
+            else {
+                ESP_LOGW(TAG, "Credentials invalid, not reconnecting.");
+                this->current_state = State::DISCONNECTED;
+            }
+
+            // Signal failure so blocking connect() calls can return
+            xEventGroupSetBits(this->wifi_event_group, CONNECT_FAILED_BIT);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void WiFiManager::handle_ip_event(const Command &cmd, State state)
+{
+    if (cmd.event_id == IP_EVENT_STA_GOT_IP) {
+        ESP_LOGI(TAG, "Task Event: GOT_IP");
+        if (state == State::CONNECTING || state == State::CONNECTED_NO_IP) {
+            this->current_state       = State::CONNECTED_GOT_IP;
+            this->retry_count         = 0; // Reset retries on success
+            this->suspect_retry_count = 0;
+            if (!this->is_credential_valid) {
+                this->save_valid_flag(true);
+            }
+            xEventGroupSetBits(this->wifi_event_group, CONNECTED_BIT);
+        }
+        else {
+            ESP_LOGW(TAG, "GOT_IP ignored in state %d", (int)state);
+        }
+    }
+}
+
+esp_err_t WiFiManager::validate_command(CommandId cmd, State current) const
+{
+    uint32_t s_bit = (uint32_t)current;
+
+    switch (cmd) {
+    case CommandId::START:
+        if (s_bit & CAN_START_MASK)
+            return ESP_OK;
+        // Idempotency: Already operational or in an active state
+        if (s_bit & (IS_ACTIVE_MASK | (uint32_t)State::STARTING))
+            return ESP_OK;
+        return ESP_ERR_INVALID_STATE;
+
+    case CommandId::STOP:
+        if (s_bit & CAN_STOP_MASK)
+            return ESP_OK;
+        // Idempotency: Already stopped or currently stopping
+        if (s_bit & ((uint32_t)State::STOPPED | (uint32_t)State::STOPPING))
+            return ESP_OK;
+        return ESP_ERR_INVALID_STATE;
+
+    case CommandId::CONNECT:
+        if (s_bit & CAN_CONNECT_MASK)
+            return ESP_OK;
+        // Idempotency: Already connecting or connected
+        if (s_bit & ((uint32_t)State::CONNECTING | IS_CONNECTED_MASK))
+            return ESP_OK;
+        return ESP_ERR_INVALID_STATE;
+
+    case CommandId::DISCONNECT:
+        if (s_bit & CAN_DISCONNECT_MASK)
+            return ESP_OK;
+        // Idempotency: Already disconnected or currently disconnecting
+        if (s_bit & ((uint32_t)State::DISCONNECTED | (uint32_t)State::DISCONNECTING))
+            return ESP_OK;
+        return ESP_ERR_INVALID_STATE;
+
+    default:
+        // System events and internal commands are usually not gated here
+        return ESP_OK;
+    }
+}
+
 void WiFiManager::wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data)
 
 {
@@ -722,6 +1137,7 @@ void WiFiManager::wifi_event_handler(void *arg, esp_event_base_t base, int32_t i
     if (id == WIFI_EVENT_STA_DISCONNECTED && data != nullptr) {
         wifi_event_sta_disconnected_t *disconn = static_cast<wifi_event_sta_disconnected_t *>(data);
         cmd.reason                             = disconn->reason;
+        cmd.rssi                               = disconn->rssi;
     }
 
     xQueueSendFromISR(self->command_queue, &cmd, nullptr);
@@ -740,9 +1156,8 @@ void WiFiManager::wifi_task(void *pvParameters)
 {
     WiFiManager *self = static_cast<WiFiManager *>(pvParameters);
     Command cmd;
-    esp_err_t err;
 
-    for (;;) {
+    while (true) {
         TickType_t wait_ticks = portMAX_DELAY;
 
         // If we are waiting to reconnect, calculate the remaining backoff time
@@ -761,395 +1176,15 @@ void WiFiManager::wifi_task(void *pvParameters)
             // The state mutex is held for the duration of a command processing
             xSemaphoreTakeRecursive(self->state_mutex, portMAX_DELAY);
 
-            // Any explicit user command resets the retry counters
-            if (cmd.id != CommandId::HANDLE_EVENT_WIFI && cmd.id != CommandId::HANDLE_EVENT_IP) {
-                self->retry_count         = 0;
-                self->suspect_retry_count = 0;
-            }
-
-            switch (cmd.id) {
-            case CommandId::START:
-            {
-                State s = self->current_state;
-
-                switch (s) {
-                    // Invalid: before initialization
-                case State::UNINITIALIZED:
-                case State::INITIALIZING:
-                    ESP_LOGE(TAG, "WiFi manager not initialized (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-
-                    // Invalid: already starting/started or in operational states
-                case State::STARTING:
-                case State::STARTED:
-                case State::CONNECTING:
-                case State::CONNECTED_NO_IP:
-                case State::CONNECTED_GOT_IP:
-                case State::DISCONNECTING:
-                case State::DISCONNECTED:
-                case State::WAITING_RECONNECT:
-                case State::ERROR_CREDENTIALS:
-                    // Already started or in process - signal success for sync APIs
-                    ESP_LOGI(TAG, "WiFi already operational (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, STARTED_BIT);
-                    break;
-
-                    // Invalid: in process of stopping
-                case State::STOPPING:
-                    ESP_LOGE(TAG, "Cannot start while stopping (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-
-                    // Valid states for start operation
-                case State::INITIALIZED:
-                case State::STOPPED:
-
-                    // Transition to STARTING state
-                    self->current_state = State::STARTING;
-                    if ((err = esp_wifi_start()) != ESP_OK) {
-                        ESP_LOGE(TAG, "Failed to start wifi: %s", esp_err_to_name(err));
-                        self->current_state = s;
-                        xEventGroupSetBits(self->wifi_event_group, START_FAILED_BIT);
-                    }
-                    break;
-
-                default:
-                    ESP_LOGE(TAG, "Unknown state encountered: %d", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-                }
-                break;
-            }
-            case CommandId::STOP:
-            {
-                State s = self->current_state;
-                switch (s) {
-                // Invalid: not initialized or already stopped
-                case State::UNINITIALIZED:
-                case State::INITIALIZING:
-                case State::INITIALIZED:
-                    ESP_LOGE(TAG, "WiFi driver not started (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-
-                    // Already stopped, setting bits for sync APIs
-                case State::STOPPED:
-                    ESP_LOGI(TAG, "WiFi driver already stopped.");
-                    xEventGroupSetBits(self->wifi_event_group, STOPPED_BIT);
-                    break;
-
-                    // Invalid: already in process of stopping
-                case State::STOPPING:
-                    ESP_LOGW(TAG, "Already stopping WiFi driver.");
-                    break;
-
-                    // Valid states for stop operation
-                case State::STARTING:
-                case State::STARTED:
-                case State::CONNECTING:
-                case State::CONNECTED_NO_IP:
-                case State::CONNECTED_GOT_IP:
-                case State::DISCONNECTING:
-                case State::DISCONNECTED:
-                case State::WAITING_RECONNECT:
-                case State::ERROR_CREDENTIALS:
-                    // Transition to STOPPING state
-                    self->current_state = State::STOPPING;
-                    if ((err = esp_wifi_stop()) != ESP_OK) {
-                        ESP_LOGE(TAG, "Failed to stop wifi: %s", esp_err_to_name(err));
-                        self->current_state = s;
-                        xEventGroupSetBits(self->wifi_event_group, STOP_FAILED_BIT);
-                    }
-                    break;
-
-                default:
-                    ESP_LOGE(TAG, "Unknown state encountered: %d", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-                }
-                break;
-            }
-            case CommandId::CONNECT:
-            {
-                State s = self->current_state;
-
-                switch (s) {
-                    // Already successfully connected - signal success for sync APIs
-                case State::CONNECTED_GOT_IP:
-                    ESP_LOGI(TAG, "Already connected with IP.");
-                    xEventGroupSetBits(self->wifi_event_group, CONNECTED_BIT);
-                    break;
-
-                    // Invalid states: WiFi not operational
-                case State::UNINITIALIZED:
-                case State::INITIALIZING:
-                case State::INITIALIZED:
-                case State::STARTING:
-                    ESP_LOGE(TAG, "WiFi driver not started (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-
-                case State::STOPPING:
-                case State::STOPPED:
-                    ESP_LOGE(TAG, "WiFi driver stopping or stopped (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-
-                    // Invalid state: credentials proven invalid
-                case State::ERROR_CREDENTIALS:
-                    ESP_LOGE(TAG, "Credentials invalidated (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-
-                    // Operation conflict: currently disconnecting
-                case State::DISCONNECTING:
-                    ESP_LOGW(TAG, "Cannot connect while disconnecting (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-
-                    // Redundant operation: connection already in progress
-                case State::CONNECTING:
-                case State::CONNECTED_NO_IP:
-                    ESP_LOGW(TAG, "Connection already in progress (state: %d).", (int)s);
-                    // No bits set - async calls ignore, sync will timeout
-                    break;
-
-                    // Valid states for connect operation
-                case State::STARTED:
-                case State::DISCONNECTED:
-                case State::WAITING_RECONNECT:
-                    // Transition to CONNECTING and attempt connection
-                    self->current_state = State::CONNECTING;
-                    if ((err = esp_wifi_connect()) != ESP_OK) {
-                        ESP_LOGE(TAG, "Failed to connect wifi: %s", esp_err_to_name(err));
-                        self->current_state = s;
-                        xEventGroupSetBits(self->wifi_event_group, CONNECT_FAILED_BIT);
-                    }
-                    break;
-
-                default:
-                    ESP_LOGE(TAG, "Invalid state: %d", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-                }
-
-                break;
-            }
-            case CommandId::DISCONNECT:
-            {
-                State s = self->current_state;
-
-                switch (s) {
-                    // Invalid states: WiFi not operational
-                case State::UNINITIALIZED:
-                case State::INITIALIZING:
-                case State::INITIALIZED:
-                case State::STARTING:
-                case State::STOPPING:
-                case State::STOPPED:
-                    ESP_LOGE(TAG, "WiFi not active (state: %d).", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-                    ;
-
-                    // Invalid state: already disconnected
-                case State::DISCONNECTED:
-                    ESP_LOGI(TAG, "Already disconnected.");
-                    xEventGroupSetBits(self->wifi_event_group, DISCONNECTED_BIT);
-                    break;
-
-                    // Invalid state: already disconnecting
-                case State::DISCONNECTING:
-                    ESP_LOGW(TAG, "Already disconnecting.");
-                    break;
-
-                    // Valid states
-                case State::STARTED:
-                case State::CONNECTING:
-                case State::CONNECTED_NO_IP:
-                case State::CONNECTED_GOT_IP:
-                case State::WAITING_RECONNECT:
-                case State::ERROR_CREDENTIALS:
-                    // SPECIAL CASE: Rollback during early connect phase or backoff.
-                    // The driver might not emit a DISCONNECTED event if we call
-                    // disconnect before the link is established or while waiting.
-                    if (s == State::WAITING_RECONNECT || s == State::CONNECTING) {
-                        self->current_state = State::DISCONNECTED;
-                        esp_wifi_disconnect();
-                        xEventGroupSetBits(self->wifi_event_group, DISCONNECTED_BIT);
-                    }
-                    else {
-                        // Transition to DISCONNECTING and attempt disconnection
-                        self->current_state = State::DISCONNECTING;
-                        if ((err = esp_wifi_disconnect()) != ESP_OK) {
-                            ESP_LOGE(TAG, "Failed to disconnect wifi: %s", esp_err_to_name(err));
-
-                            self->current_state = s;
-                            xEventGroupSetBits(self->wifi_event_group, CONNECT_FAILED_BIT);
-                        }
-                    }
-                    break;
-
-                default:
-                    ESP_LOGE(TAG, "Unknown state: %d", (int)s);
-                    xEventGroupSetBits(self->wifi_event_group, INVALID_STATE_BIT);
-                    break;
-                }
-                break;
-            }
-
-            case CommandId::HANDLE_EVENT_WIFI:
-                // Handle events from the WiFi driver and transition states accordingly
-                switch (cmd.event_id) {
-                case WIFI_EVENT_STA_START:
-                    ESP_LOGD(TAG, "Task Event: STA_START");
-                    if (self->current_state == State::STARTING) {
-                        self->current_state = State::STARTED;
-                        xEventGroupSetBits(self->wifi_event_group, STARTED_BIT);
-                    }
-                    else {
-                        ESP_LOGW(TAG, "STA_START ignored in state %d", (int)self->current_state);
-                    }
-                    break;
-                case WIFI_EVENT_STA_STOP:
-                    ESP_LOGD(TAG, "Task Event: STA_STOP");
-                    if (self->current_state == State::STOPPING) {
-                        self->current_state = State::STOPPED;
-                        xEventGroupSetBits(self->wifi_event_group, STOPPED_BIT);
-                    }
-                    else {
-                        ESP_LOGW(TAG, "STA_STOP ignored in state %d", (int)self->current_state);
-                    }
-                    break;
-                case WIFI_EVENT_STA_CONNECTED:
-                    ESP_LOGD(TAG, "Task Event: STA_CONNECTED");
-                    if (self->current_state == State::CONNECTING) {
-                        self->current_state = State::CONNECTED_NO_IP;
-                    }
-                    else {
-                        ESP_LOGW(TAG, "STA_CONNECTED ignored in state %d",
-                                 (int)self->current_state);
-                    }
-                    break;
-                case WIFI_EVENT_STA_DISCONNECTED:
-                {
-                    ESP_LOGI(TAG, "Task Event: STA_DISCONNECTED (reason: %d)", cmd.reason);
-
-                    State s = self->current_state;
-
-                    // Ignore if driver is not supposed to be running
-                    if (s == State::UNINITIALIZED || s == State::INITIALIZING ||
-                        s == State::INITIALIZED || s == State::STOPPED) {
-                        ESP_LOGW(TAG, "STA_DISCONNECTED ignored in state %d", (int)s);
-                        break;
-                    }
-
-                    // Case 1: Disconnection was intended (via API)
-                    if (s == State::DISCONNECTING || s == State::STOPPING) {
-                        if (s == State::DISCONNECTING) {
-                            self->current_state = State::DISCONNECTED;
-                        }
-                        // If STOPPING, we stay in STOPPING until WIFI_EVENT_STA_STOP
-                        xEventGroupSetBits(self->wifi_event_group,
-                                           DISCONNECTED_BIT | CONNECT_FAILED_BIT);
-                    }
-                    // Case 1: Intentional disconnect
-                    else if (cmd.reason == WIFI_REASON_ASSOC_LEAVE) {
-                        ESP_LOGI(TAG, "Disconnected (Reason: ASSOC_LEAVE).");
-                        self->current_state = State::DISCONNECTED;
-                        xEventGroupSetBits(self->wifi_event_group,
-                                           DISCONNECTED_BIT | CONNECT_FAILED_BIT);
-                    }
-                    // Case 2: Definite credential failure
-                    else if (cmd.reason == WIFI_REASON_AUTH_FAIL ||
-                             cmd.reason == WIFI_REASON_802_1X_AUTH_FAILED ||
-                             cmd.reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT ||
-                             cmd.reason == WIFI_REASON_HANDSHAKE_TIMEOUT) {
-                        ESP_LOGE(TAG, "Authentication failed (Reason: %d).", cmd.reason);
-                        self->current_state = State::ERROR_CREDENTIALS;
-                        self->save_valid_flag(false);
-                        xEventGroupSetBits(self->wifi_event_group, CONNECT_FAILED_BIT);
-                    }
-                    // Case 3: Suspect credential failure
-                    else if (cmd.reason == WIFI_REASON_CONNECTION_FAIL) {
-                        self->suspect_retry_count++;
-                        ESP_LOGW(TAG, "Suspect failure %lu/3 (Reason: %d).",
-                                 (unsigned long)self->suspect_retry_count, cmd.reason);
-
-                        if (self->suspect_retry_count >= 3) {
-                            ESP_LOGE(TAG, "Too many suspect failures. Invalidating credentials.");
-                            self->current_state = State::ERROR_CREDENTIALS;
-                            self->save_valid_flag(false);
-                        }
-                        else {
-                            self->current_state = State::WAITING_RECONNECT;
-                            self->retry_count++;
-                            uint32_t delay_ms = 1000 * (1 << (self->retry_count - 1));
-                            if (delay_ms > 300000)
-                                delay_ms = 300000;
-                            self->next_reconnect_ms = (esp_timer_get_time() / 1000) + delay_ms;
-                        }
-                        xEventGroupSetBits(self->wifi_event_group, CONNECT_FAILED_BIT);
-                    }
-                    // Case 4: Recoverable failure
-                    else {
-                        if (self->is_credential_valid) {
-                            self->current_state = State::WAITING_RECONNECT;
-                            self->retry_count++;
-
-                            uint32_t delay_ms = 1000; // First retry after 1s
-                            if (self->retry_count > 1) {
-                                // Exponential backoff: 2s, 4s, 8s... max 300s (5 min)
-                                delay_ms = (1 << (self->retry_count - 1)) * 1000;
-                                if (delay_ms > 300000)
-                                    delay_ms = 300000;
-                            }
-                            self->next_reconnect_ms = (esp_timer_get_time() / 1000) + delay_ms;
-
-                            ESP_LOGI(TAG, "Reconnection attempt %lu in %lu ms...",
-                                     (unsigned long)self->retry_count, (unsigned long)delay_ms);
-                        }
-                        else {
-                            ESP_LOGW(TAG, "Credentials invalid, not reconnecting.");
-                            self->current_state = State::DISCONNECTED;
-                        }
-
-                        // Signal failure so blocking connect() calls can return
-                        xEventGroupSetBits(self->wifi_event_group, CONNECT_FAILED_BIT);
-                    }
-                    break;
-                }
-                }
-                break;
-
-            case CommandId::HANDLE_EVENT_IP:
-                if (cmd.event_id == IP_EVENT_STA_GOT_IP) {
-                    ESP_LOGI(TAG, "Task Event: GOT_IP");
-                    if (self->current_state == State::CONNECTING ||
-                        self->current_state == State::CONNECTED_NO_IP) {
-                        self->current_state       = State::CONNECTED_GOT_IP;
-                        self->retry_count         = 0; // Reset retries on success
-                        self->suspect_retry_count = 0;
-                        if (!self->is_credential_valid) {
-                            self->save_valid_flag(true);
-                        }
-                        xEventGroupSetBits(self->wifi_event_group, CONNECTED_BIT);
-                    }
-                    else {
-                        ESP_LOGW(TAG, "GOT_IP ignored in state %d", (int)self->current_state);
-                    }
-                }
-                break;
-
-            case CommandId::EXIT:
+            if (cmd.id == CommandId::EXIT) {
                 ESP_LOGI(TAG, "WiFi Task exiting...");
-                // Mutex must be released before the task disappears
                 xSemaphoreGiveRecursive(self->state_mutex);
                 self->task_handle = nullptr; // Signal to deinit() that we are gone
                 vTaskDelete(NULL);
                 return; // Should not reach here
             }
+
+            self->process_command(cmd, self->current_state);
             xSemaphoreGiveRecursive(self->state_mutex);
         }
         else {

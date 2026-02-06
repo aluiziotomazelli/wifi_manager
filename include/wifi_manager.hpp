@@ -42,22 +42,22 @@ public:
     /**
      * @brief Internal states of the WiFi manager.
      */
-    enum class State
+    enum class State : uint32_t
     {
-        UNINITIALIZED     = 0,  ///< Initial state before init() is called.
-        INITIALIZING      = 1,  ///< In the process of setting up resources.
-        INITIALIZED       = 2,  ///< Resources allocated, task running, driver not started.
-        STARTING          = 3,  ///< In the process of starting the WiFi driver.
-        STARTED           = 4,  ///< WiFi driver started in STA mode.
-        CONNECTING        = 5,  ///< Attempting to connect to an AP.
-        CONNECTED_NO_IP   = 6,  ///< Connected to AP, waiting for DHCP/Static IP.
-        CONNECTED_GOT_IP  = 7,  ///< Successfully connected and has an IP address.
-        DISCONNECTING     = 8,  ///< In the process of disconnecting from the AP.
-        DISCONNECTED      = 9,  ///< Not connected to any AP.
-        WAITING_RECONNECT = 10, ///< Waiting for backoff timer to retry connection.
-        ERROR_CREDENTIALS = 11, ///< Last connection failed due to invalid credentials.
-        STOPPING          = 12, ///< In the process of stopping the WiFi driver.
-        STOPPED           = 13, ///< WiFi driver stopped.
+        UNINITIALIZED     = 1 << 0,      ///< Initial state before init() is called.
+        INITIALIZING      = 1 << 1,      ///< In the process of setting up resources.
+        INITIALIZED       = 1 << 2,      ///< Resources allocated, task running, driver not started.
+        STARTING          = 1 << 3,      ///< In the process of starting the WiFi driver.
+        STARTED           = 1 << 4,      ///< WiFi driver started in STA mode.
+        CONNECTING        = 1 << 5,      ///< Attempting to connect to an AP.
+        CONNECTED_NO_IP   = 1 << 6,      ///< Connected to AP, waiting for DHCP/Static IP.
+        CONNECTED_GOT_IP  = 1 << 7,      ///< Successfully connected and has an IP address.
+        DISCONNECTING     = 1 << 8,      ///< In the process of disconnecting from the AP.
+        DISCONNECTED      = STARTED,     ///< Alias: Driver is ON but no connection.
+        WAITING_RECONNECT = 1 << 9,      ///< Waiting for backoff timer to retry connection.
+        ERROR_CREDENTIALS = 1 << 10,     ///< Last connection failed due to invalid credentials.
+        STOPPING          = 1 << 11,     ///< In the process of stopping the WiFi driver.
+        STOPPED           = INITIALIZED, ///< Alias: Driver is OFF but resources allocated.
     };
 
     /**
@@ -223,18 +223,14 @@ public:
      */
     bool is_credentials_valid() const;
 
+#ifdef UNIT_TEST
+public:
+#else
 private:
-    // Private constructor for singleton
-    WiFiManager();
-    // Private destructor
-    ~WiFiManager();
-
-    // Internal helper to initialize NVS flash partition
-    esp_err_t init_nvs();
-
-    // --- Internal Machinery ---
-
-    // Internal command IDs for the manager task queue
+#endif
+    /**
+     * @brief Internal command IDs for the manager task queue.
+     */
     enum class CommandId
     {
         START,             // Request to start WiFi driver
@@ -246,15 +242,25 @@ private:
         EXIT,              // Request to terminate the manager task
     };
 
-    // Structure used to pass commands and data to the internal task
+    /**
+     * @brief Structure used to pass commands and data to the internal task.
+     */
     struct Command
     {
         CommandId id;     // The operation requested
         int32_t event_id; // Event ID for HANDLE_EVENT_* commands
         uint8_t reason;   // Reason code for DISCONNECTED events
+        int8_t rssi;      // RSSI at failure for DISCONNECTED events
     };
 
 private:
+    // Private constructor for singleton
+    WiFiManager();
+    // Private destructor
+    ~WiFiManager();
+
+    // Internal helper to initialize NVS flash partition
+    esp_err_t init_nvs();
     // FreeRTOS Event Group bits for synchronization between the API and the task
     static constexpr EventBits_t STARTED_BIT        = BIT0; ///< WiFi driver started
     static constexpr EventBits_t STOPPED_BIT        = BIT1; ///< WiFi driver stopped
@@ -269,6 +275,38 @@ private:
     static constexpr EventBits_t ALL_SYNC_BITS =
         STARTED_BIT | STOPPED_BIT | CONNECTED_BIT | DISCONNECTED_BIT | CONNECT_FAILED_BIT |
         START_FAILED_BIT | STOP_FAILED_BIT | INVALID_STATE_BIT;
+
+    // --- State Mask for internal validation ---
+    // Any connected state
+    static constexpr uint32_t IS_CONNECTED_MASK =
+        (uint32_t)State::CONNECTED_NO_IP | (uint32_t)State::CONNECTED_GOT_IP;
+
+    static constexpr uint32_t IS_STA_READY_MASK = (uint32_t)State::STARTED | IS_CONNECTED_MASK;
+
+    // Everything that is not STOPPED/INITIALIZED/UNINITIALIZED
+    static constexpr uint32_t IS_ACTIVE_MASK =
+        IS_STA_READY_MASK | (uint32_t)State::WAITING_RECONNECT |
+        (uint32_t)State::ERROR_CREDENTIALS | (uint32_t)State::STARTING |
+        (uint32_t)State::CONNECTING | (uint32_t)State::DISCONNECTING;
+
+    // --- Command Validation Masks (States where a command can be INITIALIZED) ---
+    // Start can be called if initialized/stopped
+    static constexpr uint32_t CAN_START_MASK = (uint32_t)State::INITIALIZED;
+
+    // Stop can be called if any operational mode is active or driver is starting/connecting
+    static constexpr uint32_t CAN_STOP_MASK =
+        IS_STA_READY_MASK | (uint32_t)State::STARTING | (uint32_t)State::CONNECTING |
+        (uint32_t)State::WAITING_RECONNECT | (uint32_t)State::ERROR_CREDENTIALS |
+        (uint32_t)State::DISCONNECTING;
+
+    // Connect can be called if driver is started but not yet connected
+    static constexpr uint32_t CAN_CONNECT_MASK =
+        (uint32_t)State::STARTED | (uint32_t)State::WAITING_RECONNECT;
+
+    // Disconnect can be called if currently connecting, connected, or in error/backoff
+    static constexpr uint32_t CAN_DISCONNECT_MASK =
+        (uint32_t)State::CONNECTING | IS_CONNECTED_MASK | (uint32_t)State::WAITING_RECONNECT |
+        (uint32_t)State::ERROR_CREDENTIALS;
 
     // Main FreeRTOS task loop that executes driver operations
     static void wifi_task(void *pvParameters);
@@ -288,6 +326,29 @@ private:
 
     // Private helper to post commands to the internal queue
     esp_err_t send_command(const Command &cmd, bool is_async);
+
+    /**
+     * @brief Validate if a command is allowed in the current state.
+     * @param cmd The command to validate.
+     * @param current The state to validate against.
+     * @return ESP_OK if allowed, ESP_ERR_INVALID_STATE if not.
+     */
+    esp_err_t validate_command(CommandId cmd, State current) const;
+
+    // Command Handlers
+    void handle_start(const Command &cmd, State state);
+    void handle_stop(const Command &cmd, State state);
+    void handle_connect(const Command &cmd, State state);
+    void handle_disconnect(const Command &cmd, State state);
+    void handle_wifi_event(const Command &cmd, State state);
+    void handle_ip_event(const Command &cmd, State state);
+
+    /**
+     * @brief Central dispatcher for all incoming commands.
+     * @param cmd The command to process.
+     * @param state The current state of the manager (captured under mutex).
+     */
+    void process_command(const Command &cmd, State state);
 
     // FreeRTOS Task handle for the manager loop
     TaskHandle_t task_handle;

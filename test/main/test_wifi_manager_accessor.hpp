@@ -80,12 +80,13 @@ public:
     }
 
     /**
-     * @brief Simulate a WiFi disconnection event.
+     * @brief Simulate a WiFi disconnection event with RSSI.
      */
-    void test_simulate_disconnect(uint8_t reason)
+    void test_simulate_disconnect(uint8_t reason, int8_t rssi = -60)
     {
         wifi_event_sta_disconnected_t disconn = {};
         disconn.reason                        = reason;
+        disconn.rssi                          = rssi;
         WiFiManager::wifi_event_handler(&wifi_manager, WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED,
                                         &disconn);
     }
