@@ -435,13 +435,16 @@ TEST_CASE("21 test_wifi_connect_rollback", "[wifi][connect]")
 
     wm.set_credentials("NonExistentSSID_Rollback", "password");
     esp_err_t err = wm.connect(1000);
+    printf("Error: %s\n", esp_err_to_name(err));
     TEST_ASSERT_EQUAL(ESP_ERR_TIMEOUT, err);
+    printf("State after connect timeout: %d\n", (int)wm.get_state());
 
     int retry = 0;
     while (wm.get_state() == WiFiManager::State::CONNECTING && retry < 50) {
         vTaskDelay(pdMS_TO_TICKS(100));
         retry++;
     }
+    printf("State before assert DISCONNECTED: %d\n", (int)wm.get_state());
     TEST_ASSERT_EQUAL(WiFiManager::State::DISCONNECTED, wm.get_state());
     wm.deinit();
 }

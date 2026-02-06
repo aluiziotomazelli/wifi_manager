@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+
+
+## [1.1.0] - 2026-02-06
+
+### Features
+ - New declarative FSM (Finite State Machine) architecture using transition matrices.  
+ 
+### Enhancements
+ - Improved connection robustness with signal quality (RSSI) awareness.  
+ - Implemented exponential backoff for reconnection attempts.  
+
+### Refactor
+ - Unified command and event handling into a serialized message queue.  
+
+
 ## [1.0.0] - 2026-02-02
 
 ### Added

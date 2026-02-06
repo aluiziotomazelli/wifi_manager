@@ -42,22 +42,46 @@ public:
     /**
      * @brief Internal states of the WiFi manager.
      */
-    enum class State : uint32_t
+    enum class State : uint8_t
     {
-        UNINITIALIZED     = 1 << 0,      ///< Initial state before init() is called.
-        INITIALIZING      = 1 << 1,      ///< In the process of setting up resources.
-        INITIALIZED       = 1 << 2,      ///< Resources allocated, task running, driver not started.
-        STARTING          = 1 << 3,      ///< In the process of starting the WiFi driver.
-        STARTED           = 1 << 4,      ///< WiFi driver started in STA mode.
-        CONNECTING        = 1 << 5,      ///< Attempting to connect to an AP.
-        CONNECTED_NO_IP   = 1 << 6,      ///< Connected to AP, waiting for DHCP/Static IP.
-        CONNECTED_GOT_IP  = 1 << 7,      ///< Successfully connected and has an IP address.
-        DISCONNECTING     = 1 << 8,      ///< In the process of disconnecting from the AP.
-        DISCONNECTED      = STARTED,     ///< Alias: Driver is ON but no connection.
-        WAITING_RECONNECT = 1 << 9,      ///< Waiting for backoff timer to retry connection.
-        ERROR_CREDENTIALS = 1 << 10,     ///< Last connection failed due to invalid credentials.
-        STOPPING          = 1 << 11,     ///< In the process of stopping the WiFi driver.
-        STOPPED           = INITIALIZED, ///< Alias: Driver is OFF but resources allocated.
+        UNINITIALIZED     = 0,  ///< Initial state before init() is called.
+        INITIALIZING      = 1,  ///< In the process of setting up resources.
+        INITIALIZED       = 2,  ///< Resources allocated, task running, driver not started.
+        STARTING          = 3,  ///< In the process of starting the WiFi driver.
+        STARTED           = 4,  ///< WiFi driver started in STA mode.
+        CONNECTING        = 5,  ///< Attempting to connect to an AP.
+        CONNECTED_NO_IP   = 6,  ///< Connected to AP, waiting for DHCP/Static IP.
+        CONNECTED_GOT_IP  = 7,  ///< Successfully connected and has an IP address.
+        DISCONNECTING     = 8,  ///< In the process of disconnecting from the AP.
+        WAITING_RECONNECT = 9,  ///< Waiting for backoff timer to retry connection.
+        ERROR_CREDENTIALS = 10, ///< Last connection failed due to invalid credentials.
+        STOPPING          = 11, ///< In the process of stopping the WiFi driver.
+
+        COUNT = 12, ///< Helper for matrix sizing
+
+        // Aliases for readability
+        DISCONNECTED = STARTED,
+        STOPPED      = INITIALIZED,
+    };
+
+    /**
+     * @brief Actions returned by the command validator.
+     */
+    enum class Action
+    {
+        EXECUTE, ///< Command is valid and should be processed
+        SKIP,    ///< Command is idempotent, skip execution
+        ERROR,   ///< Command is invalid for the current state
+    };
+
+    /**
+     * @brief Properties associated with each state.
+     */
+    struct StateProps
+    {
+        bool is_active;    ///< WiFi driver is operational (started or connecting/connected)
+        bool is_connected; ///< Has an active L2 connection and IP
+        bool is_sta_ready; ///< Driver is ready to accept commands (STARTED/CONNECTED)
     };
 
     /**
@@ -223,34 +247,58 @@ public:
      */
     bool is_credentials_valid() const;
 
-#ifdef UNIT_TEST
 public:
-#else
-private:
-#endif
     /**
      * @brief Internal command IDs for the manager task queue.
      */
-    enum class CommandId
+    enum class CommandId : uint8_t
     {
-        START,             // Request to start WiFi driver
-        STOP,              // Request to stop WiFi driver
-        CONNECT,           // Request to connect to an AP
-        DISCONNECT,        // Request to disconnect from an AP
-        HANDLE_EVENT_WIFI, // Bridge for WiFi system events
-        HANDLE_EVENT_IP,   // Bridge for IP system events
-        EXIT,              // Request to terminate the manager task
+        START,      ///< Request to start WiFi driver
+        STOP,       ///< Request to stop WiFi driver
+        CONNECT,    ///< Request to connect to an AP
+        DISCONNECT, ///< Request to disconnect from an AP
+        EXIT,       ///< Request to terminate the manager task
+
+        COUNT ///< Helper for matrix sizing
     };
 
     /**
-     * @brief Structure used to pass commands and data to the internal task.
+     * @brief Internal event signals mapped from system callbacks.
      */
-    struct Command
+    enum class EventId : uint8_t
     {
-        CommandId id;     // The operation requested
-        int32_t event_id; // Event ID for HANDLE_EVENT_* commands
-        uint8_t reason;   // Reason code for DISCONNECTED events
-        int8_t rssi;      // RSSI at failure for DISCONNECTED events
+        STA_START,        ///< WiFi station driver started
+        STA_STOP,         ///< WiFi station driver stopped
+        STA_CONNECTED,    ///< Connected to AP
+        STA_DISCONNECTED, ///< Disconnected from AP
+        GOT_IP,           ///< Received IP address
+        LOST_IP,          ///< IP address lost
+
+        COUNT ///< Helper for transition matrix sizing
+    };
+
+    /**
+     * @brief Discriminator for the internal message queue.
+     */
+    enum class MessageType : uint8_t
+    {
+        COMMAND, ///< Action requested by the user/API
+        EVENT,   ///< Signal reported by the system
+    };
+
+    /**
+     * @brief Structure used to pass commands and events to the internal task.
+     */
+    struct Message
+    {
+        MessageType type;
+        union
+        {
+            CommandId cmd;
+            EventId event;
+        };
+        uint8_t reason; ///< Reason code (for STA_DISCONNECTED)
+        int8_t rssi;    ///< RSSI level (for STA_DISCONNECTED)
     };
 
 private:
@@ -261,55 +309,15 @@ private:
 
     // Internal helper to initialize NVS flash partition
     esp_err_t init_nvs();
-    // FreeRTOS Event Group bits for synchronization between the API and the task
-    static constexpr EventBits_t STARTED_BIT        = BIT0; ///< WiFi driver started
-    static constexpr EventBits_t STOPPED_BIT        = BIT1; ///< WiFi driver stopped
-    static constexpr EventBits_t CONNECTED_BIT      = BIT2; ///< Got IP address
-    static constexpr EventBits_t DISCONNECTED_BIT   = BIT3; ///< Disconnected from AP
-    static constexpr EventBits_t CONNECT_FAILED_BIT = BIT4; ///< Connection attempt failed
-    static constexpr EventBits_t START_FAILED_BIT   = BIT5; ///< Driver start failed
-    static constexpr EventBits_t STOP_FAILED_BIT    = BIT6; ///< Driver stop failed
-    static constexpr EventBits_t INVALID_STATE_BIT  = BIT7; ///< Invalid state
 
-    // Mask for all synchronization bits
-    static constexpr EventBits_t ALL_SYNC_BITS =
-        STARTED_BIT | STOPPED_BIT | CONNECTED_BIT | DISCONNECTED_BIT | CONNECT_FAILED_BIT |
-        START_FAILED_BIT | STOP_FAILED_BIT | INVALID_STATE_BIT;
-
-    // --- State Mask for internal validation ---
-    // Any connected state
-    static constexpr uint32_t IS_CONNECTED_MASK =
-        (uint32_t)State::CONNECTED_NO_IP | (uint32_t)State::CONNECTED_GOT_IP;
-
-    static constexpr uint32_t IS_STA_READY_MASK = (uint32_t)State::STARTED | IS_CONNECTED_MASK;
-
-    // Everything that is not STOPPED/INITIALIZED/UNINITIALIZED
-    static constexpr uint32_t IS_ACTIVE_MASK =
-        IS_STA_READY_MASK | (uint32_t)State::WAITING_RECONNECT |
-        (uint32_t)State::ERROR_CREDENTIALS | (uint32_t)State::STARTING |
-        (uint32_t)State::CONNECTING | (uint32_t)State::DISCONNECTING;
-
-    // --- Command Validation Masks (States where a command can be INITIALIZED) ---
-    // Start can be called if initialized/stopped
-    static constexpr uint32_t CAN_START_MASK = (uint32_t)State::INITIALIZED;
-
-    // Stop can be called if any operational mode is active or driver is starting/connecting
-    static constexpr uint32_t CAN_STOP_MASK =
-        IS_STA_READY_MASK | (uint32_t)State::STARTING | (uint32_t)State::CONNECTING |
-        (uint32_t)State::WAITING_RECONNECT | (uint32_t)State::ERROR_CREDENTIALS |
-        (uint32_t)State::DISCONNECTING;
-
-    // Connect can be called if driver is started but not yet connected
-    static constexpr uint32_t CAN_CONNECT_MASK =
-        (uint32_t)State::STARTED | (uint32_t)State::WAITING_RECONNECT;
-
-    // Disconnect can be called if currently connecting, connected, or in error/backoff
-    static constexpr uint32_t CAN_DISCONNECT_MASK =
-        (uint32_t)State::CONNECTING | IS_CONNECTED_MASK | (uint32_t)State::WAITING_RECONNECT |
-        (uint32_t)State::ERROR_CREDENTIALS;
+    // Helper to persist validity flag
+    esp_err_t save_valid_flag(bool valid);
 
     // Main FreeRTOS task loop that executes driver operations
     static void wifi_task(void *pvParameters);
+
+    // Private helper to post messages to the internal queue
+    esp_err_t post_message(const Message &msg, bool is_async);
 
     // Opaque handles for ESP-IDF event handler registrations
     esp_event_handler_instance_t wifi_event_instance;
@@ -324,31 +332,46 @@ private:
     // Static callback for IP system events (bridged to task)
     static void ip_event_handler(void *arg, esp_event_base_t base, int32_t id, void *data);
 
-    // Private helper to post commands to the internal queue
-    esp_err_t send_command(const Command &cmd, bool is_async);
+    /**
+     * @brief Structure defining the result of a state transition from an event.
+     */
+    struct EventOutcome
+    {
+        State next_state;        ///< New state to transition to
+        EventBits_t bits_to_set; ///< Synchronization bits to release
+    };
 
     /**
-     * @brief Validate if a command is allowed in the current state.
+     * @brief Validates if a command can be executed in the current state.
      * @param cmd The command to validate.
      * @param current The state to validate against.
-     * @return ESP_OK if allowed, ESP_ERR_INVALID_STATE if not.
+     * @return Action Decision for the command (EXECUTE, SKIP, ERROR).
      */
-    esp_err_t validate_command(CommandId cmd, State current) const;
-
-    // Command Handlers
-    void handle_start(const Command &cmd, State state);
-    void handle_stop(const Command &cmd, State state);
-    void handle_connect(const Command &cmd, State state);
-    void handle_disconnect(const Command &cmd, State state);
-    void handle_wifi_event(const Command &cmd, State state);
-    void handle_ip_event(const Command &cmd, State state);
+    Action validate_command(CommandId cmd, State current) const;
 
     /**
-     * @brief Central dispatcher for all incoming commands.
-     * @param cmd The command to process.
+     * @brief Resolves the next state and sync bits for a given event.
+     * @param event The system event received.
+     * @param current The state to validate against.
+     * @return EventOutcome The transition logic for the event.
+     */
+    EventOutcome resolve_event(EventId event, State current) const;
+
+    // Command Handlers
+    void handle_start(const Message &msg, State state);
+    void handle_stop(const Message &msg, State state);
+    void handle_connect(const Message &msg, State state);
+    void handle_disconnect(const Message &msg, State state);
+
+    // Event Handler (LUT-based)
+    void handle_event(const Message &msg, State state);
+
+    /**
+     * @brief Central dispatcher for all incoming messages.
+     * @param msg The message (command or event) to process.
      * @param state The current state of the manager (captured under mutex).
      */
-    void process_command(const Command &cmd, State state);
+    void process_message(const Message &msg, State state);
 
     // FreeRTOS Task handle for the manager loop
     TaskHandle_t task_handle;
@@ -373,17 +396,164 @@ private:
     uint32_t suspect_retry_count;
     uint64_t next_reconnect_ms;
 
-    // Helper to persist validity flag
-    esp_err_t save_valid_flag(bool valid);
+    // FreeRTOS Event Group bits for synchronization between the API and the task
+    static constexpr EventBits_t STARTED_BIT        = BIT0; ///< WiFi driver started
+    static constexpr EventBits_t STOPPED_BIT        = BIT1; ///< WiFi driver stopped
+    static constexpr EventBits_t CONNECTED_BIT      = BIT2; ///< Got IP address
+    static constexpr EventBits_t DISCONNECTED_BIT   = BIT3; ///< Disconnected from AP
+    static constexpr EventBits_t CONNECT_FAILED_BIT = BIT4; ///< Connection attempt failed
+    static constexpr EventBits_t START_FAILED_BIT   = BIT5; ///< Driver start failed
+    static constexpr EventBits_t STOP_FAILED_BIT    = BIT6; ///< Driver stop failed
+    static constexpr EventBits_t INVALID_STATE_BIT  = BIT7; ///< Invalid state
+
+    // Mask for all synchronization bits
+    static constexpr EventBits_t ALL_SYNC_BITS = STARTED_BIT | STOPPED_BIT | CONNECTED_BIT | DISCONNECTED_BIT |
+                                                 CONNECT_FAILED_BIT | START_FAILED_BIT | STOP_FAILED_BIT |
+                                                 INVALID_STATE_BIT;
+
+    // --- State Mask for internal validation ---
+    // Properties associated with each state
+    static inline constexpr StateProps state_props[(int)State::COUNT] = {
+        /* UNINITIALIZED     */ {.is_active = false, .is_connected = false, .is_sta_ready = false},
+        /* INITIALIZING      */ {.is_active = false, .is_connected = false, .is_sta_ready = false},
+        /* INITIALIZED       */ {.is_active = false, .is_connected = false, .is_sta_ready = false},
+        /* STARTING          */ {.is_active = true, .is_connected = false, .is_sta_ready = false},
+        /* STARTED           */ {.is_active = true, .is_connected = false, .is_sta_ready = true},
+        /* CONNECTING        */ {.is_active = true, .is_connected = false, .is_sta_ready = true},
+        /* CONNECTED_NO_IP   */ {.is_active = true, .is_connected = true, .is_sta_ready = true},
+        /* CONNECTED_GOT_IP  */ {.is_active = true, .is_connected = true, .is_sta_ready = true},
+        /* DISCONNECTING     */ {.is_active = true, .is_connected = false, .is_sta_ready = true},
+        /* WAITING_RECONNECT */ {.is_active = true, .is_connected = false, .is_sta_ready = true},
+        /* ERROR_CREDENTIALS */ {.is_active = true, .is_connected = false, .is_sta_ready = true},
+        /* STOPPING          */ {.is_active = true, .is_connected = false, .is_sta_ready = false},
+    };
+
+    // Lookup Table for command validation: [Row: State][Column: CommandId]
+    static inline constexpr Action command_matrix[(int)State::COUNT][(int)CommandId::COUNT] = {
+        // {START,      STOP,          CONNECT,       DISCONNECT,    EXIT}
+        {Action::ERROR, Action::ERROR, Action::ERROR, Action::ERROR, Action::ERROR},      // UNINITIALIZED
+        {Action::ERROR, Action::ERROR, Action::ERROR, Action::ERROR, Action::ERROR},      // INITIALIZING
+        {Action::EXECUTE, Action::SKIP, Action::ERROR, Action::ERROR, Action::ERROR},     // INITIALIZED
+        {Action::SKIP, Action::EXECUTE, Action::ERROR, Action::ERROR, Action::ERROR},     // STARTING
+        {Action::SKIP, Action::EXECUTE, Action::EXECUTE, Action::SKIP, Action::ERROR},    // STARTED
+        {Action::SKIP, Action::EXECUTE, Action::SKIP, Action::EXECUTE, Action::ERROR},    // CONNECTING
+        {Action::SKIP, Action::EXECUTE, Action::SKIP, Action::EXECUTE, Action::ERROR},    // CONNECTED_NO_IP
+        {Action::SKIP, Action::EXECUTE, Action::SKIP, Action::EXECUTE, Action::ERROR},    // CONNECTED_GOT_IP
+        {Action::SKIP, Action::EXECUTE, Action::ERROR, Action::SKIP, Action::ERROR},      // DISCONNECTING
+        {Action::SKIP, Action::EXECUTE, Action::EXECUTE, Action::EXECUTE, Action::ERROR}, // WAITING_RECONNECT
+        {Action::SKIP, Action::EXECUTE, Action::EXECUTE, Action::EXECUTE, Action::ERROR}, // ERROR_CREDENTIALS
+        {Action::ERROR, Action::SKIP, Action::ERROR, Action::ERROR, Action::ERROR},       // STOPPING
+    };
+
+    /**
+     * @brief Transition Matrix for Event Handling (GOTO logic).
+     * Maps [State][EventId] -> EventOutcome {NextState, SyncBits}
+     */
+    static inline constexpr EventOutcome transition_matrix[(int)State::COUNT][(int)EventId::COUNT] = {
+        // {State, SyncBits}
+        /* UNINITIALIZED  */
+        {{State::UNINITIALIZED, 0},  // STA_START
+         {State::UNINITIALIZED, 0},  // STA_STOP
+         {State::UNINITIALIZED, 0},  // STA_CONNECTED
+         {State::UNINITIALIZED, 0},  // STA_DISCONNECTED
+         {State::UNINITIALIZED, 0},  // GOT_IP
+         {State::UNINITIALIZED, 0}}, // LOST_IP
+        /* INITIALIZING   */
+        {{State::INITIALIZING, 0},  // STA_START
+         {State::INITIALIZING, 0},  // STA_STOP
+         {State::INITIALIZING, 0},  // STA_CONNECTED
+         {State::INITIALIZING, 0},  // STA_DISCONNECTED
+         {State::INITIALIZING, 0},  // GOT_IP
+         {State::INITIALIZING, 0}}, // LOST_IP
+        /* INITIALIZED    */
+        {{State::INITIALIZED, 0},  // STA_START
+         {State::INITIALIZED, 0},  // STA_STOP
+         {State::INITIALIZED, 0},  // STA_CONNECTED
+         {State::INITIALIZED, 0},  // STA_DISCONNECTED
+         {State::INITIALIZED, 0},  // GOT_IP
+         {State::INITIALIZED, 0}}, // LOST_IP
+        /* STARTING       */
+        {{State::STARTED, STARTED_BIT},          // STA_START
+         {State::STARTING, 0},                   // STA_STOP
+         {State::STARTING, 0},                   // STA_CONNECTED
+         {State::INITIALIZED, START_FAILED_BIT}, // STA_DISCONNECTED
+         {State::STARTING, 0},                   // GOT_IP
+         {State::STARTING, 0}},                  // LOST_IP
+        /* STARTED        */
+        {{State::STARTED, 0},  // STA_START
+         {State::STARTED, 0},  // STA_STOP
+         {State::STARTED, 0},  // STA_CONNECTED (Ignore unexpected)
+         {State::STARTED, 0},  // STA_DISCONNECTED
+         {State::STARTED, 0},  // GOT_IP
+         {State::STARTED, 0}}, // LOST_IP
+        /* CONNECTING     */
+        {{State::CONNECTING, 0},                   // STA_START
+         {State::CONNECTING, 0},                   // STA_STOP
+         {State::CONNECTED_NO_IP, 0},              // STA_CONNECTED
+         {State::WAITING_RECONNECT, 0},            // STA_DISCONNECTED
+         {State::CONNECTED_GOT_IP, CONNECTED_BIT}, // GOT_IP (Early IP acquisition)
+         {State::CONNECTING, 0}},                  // LOST_IP
+        /* CONNECTED_NO_IP*/
+        {{State::CONNECTED_NO_IP, 0},              // STA_START
+         {State::CONNECTED_NO_IP, 0},              // STA_STOP
+         {State::CONNECTED_NO_IP, 0},              // STA_CONNECTED
+         {State::WAITING_RECONNECT, 0},            // STA_DISCONNECTED
+         {State::CONNECTED_GOT_IP, CONNECTED_BIT}, // GOT_IP
+         {State::CONNECTED_NO_IP, 0}},             // LOST_IP
+        /* CONNECTED_GOT_IP*/
+        {{State::CONNECTED_GOT_IP, 0},  // STA_START
+         {State::CONNECTED_GOT_IP, 0},  // STA_STOP
+         {State::CONNECTED_GOT_IP, 0},  // STA_CONNECTED
+         {State::WAITING_RECONNECT, 0}, // STA_DISCONNECTED
+         {State::CONNECTED_GOT_IP, 0},  // GOT_IP
+         {State::CONNECTED_NO_IP, 0}},  // LOST_IP
+        /* DISCONNECTING  */
+        {{State::DISCONNECTING, 0},          // STA_START
+         {State::DISCONNECTING, 0},          // STA_STOP
+         {State::DISCONNECTING, 0},          // STA_CONNECTED
+         {State::STARTED, DISCONNECTED_BIT}, // STA_DISCONNECTED
+         {State::DISCONNECTING, 0},          // GOT_IP
+         {State::DISCONNECTING, 0}},         // LOST_IP
+        /* WAITING_RECON  */
+        {{State::WAITING_RECONNECT, 0},  // STA_START
+         {State::WAITING_RECONNECT, 0},  // STA_STOP
+         {State::WAITING_RECONNECT, 0},  // STA_CONNECTED
+         {State::WAITING_RECONNECT, 0},  // STA_DISCONNECTED
+         {State::WAITING_RECONNECT, 0},  // GOT_IP
+         {State::WAITING_RECONNECT, 0}}, // LOST_IP
+        /* ERROR_CRED     */
+        {{State::ERROR_CREDENTIALS, 0},  // STA_START
+         {State::ERROR_CREDENTIALS, 0},  // STA_STOP
+         {State::ERROR_CREDENTIALS, 0},  // STA_CONNECTED
+         {State::ERROR_CREDENTIALS, 0},  // STA_DISCONNECTED
+         {State::ERROR_CREDENTIALS, 0},  // GOT_IP
+         {State::ERROR_CREDENTIALS, 0}}, // LOST_IP
+        /* STOPPING       */
+        {{State::STOPPING, 0},              // STA_START
+         {State::INITIALIZED, STOPPED_BIT}, // STA_STOP
+         {State::STOPPING, 0},              // STA_CONNECTED
+         {State::STOPPING, 0},              // STA_DISCONNECTED
+         {State::STOPPING, 0},              // GOT_IP
+         {State::STOPPING, 0}},             // LOST_IP
+    };
+
+    // Coverage verification
+    static_assert(sizeof(state_props) / sizeof(state_props[0]) == (int)State::COUNT, "StateProps coverage mismatch");
+    static_assert(sizeof(command_matrix) / sizeof(command_matrix[0]) == (int)State::COUNT,
+                  "CommandMatrix coverage mismatch");
+    static_assert(sizeof(transition_matrix) / sizeof(transition_matrix[0]) == (int)State::COUNT,
+                  "TransitionMatrix coverage mismatch");
 
 #ifdef UNIT_TEST
     friend class WiFiManagerTestAccessor;
 
-    // Helpers to create and send specific commands
+    // Helpers to create and send specific messages
     esp_err_t test_helper_send_start_command(bool is_async);
     esp_err_t test_helper_send_stop_command(bool is_async);
     esp_err_t test_helper_send_connect_command(bool is_async);
     esp_err_t test_helper_send_disconnect_command(bool is_async);
+    esp_err_t test_helper_send_wifi_event(EventId event, uint8_t reason = 0);
+    esp_err_t test_helper_send_ip_event(EventId event);
 
     // Helpers to check queue state
     uint32_t test_helper_get_queue_pending_count() const;
