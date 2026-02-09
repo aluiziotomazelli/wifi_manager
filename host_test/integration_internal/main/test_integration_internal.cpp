@@ -105,16 +105,6 @@ void tearDown(void)
 {
 }
 
-TEST_CASE("LOG on", "[wifi][log]")
-{
-    esp_log_level_set("*", ESP_LOG_DEBUG);
-}
-
-TEST_CASE("LOG off", "[wifi][log]")
-{
-    esp_log_level_set("*", ESP_LOG_NONE);
-}
-
 TEST_CASE("Internal: Queue Behaviors", "[wifi][internal][stress]")
 {
     printf("\n=== Test: Queue Behaviors ===\n");
