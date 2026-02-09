@@ -72,3 +72,25 @@ Testes disponíveis:
 
 ---
 *Este arquivo foi gerado automaticamente pelo Jules para documentar a configuração do ambiente.*
+
+
+
+### Google Jules 
+Setup script to set Environment Setup script on GoogleJules
+
+```
+sudo apt-get update
+
+sudo apt-get install -y git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0 libbsd-dev ruby
+
+mkdir -p ~/esp
+cd ~/esp
+git clone --recursive --branch v5.5.2 --depth 1 https://github.com/espressif/esp-idf.git
+
+cd ~/esp/esp-idf
+./install.sh linux
+
+. ~/esp/esp-idf/export.sh
+
+python -m pip install pytest
+```

@@ -32,3 +32,7 @@ Thumbs.db
 *.log
 **/secrets.h
 **/secrets.hpp
+
+#tests
+**/__pycache__/
+*.pyc
