@@ -36,8 +36,7 @@ static void print_memory(const char *label)
 {
     size_t free_8bit  = heap_caps_get_free_size(MALLOC_CAP_8BIT);
     size_t free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
-    printf("%s - 8BIT: %u, 32BIT: %u bytes free\n", label, (unsigned)free_8bit,
-           (unsigned)free_32bit);
+    printf("%s - 8BIT: %u, 32BIT: %u bytes free\n", label, (unsigned)free_8bit, (unsigned)free_32bit);
 }
 
 // ========================================================================
@@ -51,7 +50,7 @@ TEST_CASE("1 LOG on", "[wifi][log]")
 
 TEST_CASE("2 LOG off", "[wifi][log]")
 {
-    esp_log_level_set("*", ESP_LOG_ERROR);
+    esp_log_level_set("*", ESP_LOG_NONE);
 }
 
 // ========================================================================

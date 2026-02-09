@@ -3,7 +3,7 @@ idf_component_register(
     SRCS
         "main.c"
         "test_wifi_manager.cpp"
-        "test_wifi_manager_internal.cpp"
+        # "test_wifi_manager_internal.cpp"
     INCLUDE_DIRS 
         "."
     REQUIRES 

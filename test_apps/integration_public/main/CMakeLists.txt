@@ -1,0 +1,15 @@
+idf_component_register(
+    SRCS 
+        "main.c" 
+        "test_integration_public.cpp"
+    INCLUDE_DIRS 
+        "."
+        "../../common"
+    REQUIRES 
+        unity 
+        wifi_manager 
+        nvs_flash 
+        esp_wifi 
+        esp_event
+        WHOLE_ARCHIVE
+        )
