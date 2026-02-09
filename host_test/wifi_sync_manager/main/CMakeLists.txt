@@ -11,5 +11,6 @@ idf_component_register(
         esp_event
         esp_netif
         esp_wifi
-        WHOLE_ARCHIVE
+        esp_timer
+    WHOLE_ARCHIVE
 )

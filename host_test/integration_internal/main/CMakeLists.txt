@@ -1,9 +1,10 @@
 idf_component_register(
     SRCS
-        "test_wifi_state_machine.cpp"
+        "test_integration_internal.cpp"
         "test_main.cpp"
     INCLUDE_DIRS
         "."
+        "../../common"
     REQUIRES
         unity
         wifi_manager

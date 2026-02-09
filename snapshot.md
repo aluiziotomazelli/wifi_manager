@@ -36,19 +36,27 @@ sudo apt-get install -y git wget flex bison gperf python3 python3-pip python3-ve
 
 ## 4. Executando os Testes de Host
 
-Para executar os testes de host do `wifi_config_storage`:
+Existem vários testes de host disponíveis na pasta `host_test/`. Para executar qualquer um deles (por exemplo, `integration_internal`):
 
 ```bash
 # Navegar até a pasta do teste
-cd host_test/wifi_config_storage
+cd host_test/integration_internal
 
 # Garantir que o target está como linux
 idf.py --preview set-target linux
 
 # Build e execução
 idf.py build
-./build/wifi_config_storage_host_test.elf
+./build/integration_internal_host_test.elf
 ```
+
+Testes disponíveis:
+- `wifi_config_storage`
+- `wifi_driver_hal`
+- `wifi_event_handler`
+- `wifi_state_machine`
+- `wifi_sync_manager`
+- `integration_internal`
 
 ---
 *Este arquivo foi gerado automaticamente pelo Jules para documentar a configuração do ambiente.*
