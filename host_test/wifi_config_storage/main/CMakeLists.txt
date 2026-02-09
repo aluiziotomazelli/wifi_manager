@@ -1,0 +1,15 @@
+idf_component_register(
+    SRCS
+        "test_wifi_config_storage.cpp"
+        "test_main.cpp"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        unity
+        wifi_manager
+        nvs_flash
+        esp_event
+        esp_netif
+        esp_wifi
+        WHOLE_ARCHIVE
+)
