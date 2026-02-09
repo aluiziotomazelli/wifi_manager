@@ -1,4 +1,3 @@
-#include "esp_event.h"
 #include "esp_wifi_types.h"
 #include "unity.h"
 #include "wifi_event_handler.hpp"

@@ -1,11 +1,7 @@
-#include "esp_event.h"
-#include "esp_netif.h"
-#include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 #include "wifi_config_storage.hpp"
 #include "wifi_driver_hal.hpp"
-#include <iostream>
 #include <unity.h>
 
 // Mock Kconfig if needed, but in idf.py build it should be available via sdkconfig.h

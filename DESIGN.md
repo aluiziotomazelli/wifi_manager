@@ -4,15 +4,73 @@ This document explains the internal architecture, message flow, and state machin
 
 ## Architecture Overview
 
-The `WiFiManager` follows a **Message-Driven State Machine** pattern. It uses a single FreeRTOS task (`wifi_task`) to serialize all operations, ensuring thread safety without heavy locking.
+The refactored `WiFiManager` follows a **Component-Based Architecture** driven by a central **Message Loop**. It decomposes responsibilities into specialized classes to ensure modularity and testability.
 
-### Key Components
+### High-Level Diagram
 
-1.  **Unified Message Queue**: A FreeRTOS queue (`command_queue`) that receives both `MessageType::COMMAND` (from API) and `MessageType::EVENT` (from system callbacks).
-2.  **Lookup Tables (LUTs)**:
-    *   `command_matrix`: Validates if a command (e.g., `CONNECT`) is allowed in the current state.
-    *   `transition_matrix`: Defines the "GOTO" logic for system events (e.g., if `STA_CONNECTED` arrives while `CONNECTING`, go to `CONNECTED_NO_IP`).
-3.  **Synchronization**: An Event Group handles the handshake between the asynchronous task and the synchronous API callers.
+```mermaid
+graph TD
+    User[User API] --> WM[WiFiManager Facade]
+    WM --> Sync[WiFiSyncManager]
+    WM --> Storage[WiFiConfigStorage]
+    
+    subgraph "Internal Task Context"
+        Task[WiFi Task Loop]
+        Task --> Sync
+        Task --> FSM[WiFiStateMachine]
+        Task --> HAL[WiFiDriverHAL]
+    end
+    
+    System[ESP-IDF Events] --> Event[WiFiEventHandler]
+    Event --> Sync
+```
+
+## Key Components
+
+### 1. WiFiManager (The Orchestrator)
+- **Role**: Facade and Main Task entry point.
+- **Responsibilities**: 
+    - Initializes all sub-components.
+    - Runs the main FreeRTOS task loop.
+    - Dispatches messages to the appropriate handlers.
+    - Coordinates the interaction between FSM, HAL, and Sync layers.
+
+### 2. WiFiStateMachine (The Brain)
+- **Role**: Pure logic component.
+- **Responsibilities**:
+    - Defines all States, Events, and Commands.
+    - Maintenance of the **Transition Matrix** (State + Event -> Next State).
+    - Maintenance of the **Command Matrix** (State + Command -> Allowed?).
+    - **No side effects**: It only returns *decisions* (e.g., "Transition to CONNECTING", "Set Connected Bit").
+
+### 3. WiFiSyncManager (The Nervous System)
+- **Role**: Concurrency and Synchronization.
+- **Responsibilities**:
+    - Wraps FreeRTOS `QueueHandle_t` (Command Queue).
+    - Wraps FreeRTOS `EventGroupHandle_t` (Status Bits).
+    - Provides thread-safe methods for posting messages (`post_message`) and waiting for results (`wait_for_result`).
+    - Centralizes timeout handling.
+
+### 4. WiFiDriverHAL (The Limbs)
+- **Role**: Hardware Abstraction Layer.
+- **Responsibilities**:
+    - Wraps all raw `esp_wifi_*` and `esp_netif_*` calls.
+    - Provides a clean C++ interface for driver operations.
+    - Allows mocking hardware interactions for unit testing.
+
+### 5. WiFiConfigStorage (The Memory)
+- **Role**: Persistence.
+- **Responsibilities**:
+    - Handles NVS (Non-Volatile Storage) operations.
+    - Saves and loads WiFi credentials.
+    - Manages the "validity" flag to prevent boot loops on bad credentials.
+
+### 6. WiFiEventHandler (The Senses)
+- **Role**: Event Translation.
+- **Responsibilities**:
+    - Receives raw `void*` events from the ESP-IDF Event Loop.
+    - Translates them into strongly-typed `WiFiStateMachine::EventId`.
+    - Posts them to the `WiFiSyncManager` queue.
 
 ---
 
@@ -20,59 +78,55 @@ The `WiFiManager` follows a **Message-Driven State Machine** pattern. It uses a 
 
 ### 1. Synchronous Command Flow (e.g., `connect(timeout)`)
 
-When a user calls a synchronous API method:
+1.  **User Call**: `WiFiManager::connect(timeout)`.
+2.  **Validation**: Queries `WiFiStateMachine` to see if `CONNECT` is allowed in current state.
+3.  **Posting**: Calls `WiFiSyncManager::post_message(COMMAND_CONNECT)`.
+4.  **Waiting**: Calls `WiFiSyncManager::wait_for_result(CONNECTED_BIT, timeout)`. The user task blocks here.
+5.  **Processing**:
+    *   `wifi_task` wakes up, dequeues the command.
+    *   Calls `WiFiDriverHAL::connect()`.
+6.  **Signaling**:
+    *   Eventually, a system event (e.g., `STA_CONNECTED`) or error arrives.
+    *   `WiFiSyncManager` sets the `CONNECTED_BIT` (driven by FSM logic).
+    *   The user task unblocks and returns `ESP_OK`.
 
-1.  **Validation**: The API call checks `command_matrix[current_state][COMMAND]`. If invalid, it returns immediately.
-2.  **Preparation**: It clears relevant bits in the `wifi_event_group` (e.g., `CONNECTED_BIT`).
-3.  **Posting**: It calls `post_message(is_async=false)`. This sends the command to the queue.
-4.  **Blocking**: The API call then calls `xEventGroupWaitBits`, blocking the caller's task until the internal `wifi_task` signals completion.
-5.  **Task Processing**: 
-    *   `wifi_task` wakes up, receives the `COMMAND` message.
-    *   It dispatches to the handler (e.g., `handle_connect`).
-    *   The handler calls the actual ESP-IDF driver (e.g., `esp_wifi_connect`).
-6.  **Feedback**: 
-    *   If the driver call fails, the handler immediately sets the `CONNECT_FAILED_BIT`.
-    *   If successful, the task waits for system events.
-7.  **Resolution**: When the bits are set, the API caller task unblocks and returns the result to the user.
+### 2. System Event Flow (e.g., `STA_CONNECTED`)
 
-### 2. Asynchronous Command Flow (e.g., `connect()`)
-
-Similar to the synchronous flow, but skips the blocking step:
-
-1.  **Validation & Posting**: Same as above, but `post_message(is_async=true)` is used.
-2.  **Immediate Return**: The API returns `ESP_OK` immediately after the message is successfully queued.
-3.  **Background Processing**: The `wifi_task` processes the command in the background. The user is expected to check state or use a separate synchronization mechanism if they need to know when it finishes.
-
-### 3. System Event Flow (e.g., `STA_CONNECTED`)
-
-When a driver event occurs (e.g., link established):
-
-1.  **Bridge Handler**: The `wifi_event_handler` (static callback) is triggered by the ESP-IDF event loop.
-2.  **ISR-Safe Posting**: It packs the event data into a `Message` (`type=EVENT`) and calls `xQueueSendFromISR`. This is extremely fast and non-blocking.
-3.  **Dispatcher**: The `wifi_task` wakes up and calls `process_message` -> `handle_event`.
-4.  **Matrix Resolution**: 
-    *   `handle_event` calls `resolve_event(event, current_state)`.
-    *   It looks up the result in the `transition_matrix`.
-    *   It updates correctly to the **Next State**.
-5.  **Auto-Signaling**: If the matrix defines `bits_to_set` (e.g., `CONNECTED_BIT`), they are set automatically.
-6.  **Side Effects**: The code then enters a `switch` statement to handle logic that the matrix can't capture (like starting the backoff timer on a disconnect or logging RSSI quality).
+1.  **System Event**: ESP-IDF triggers the callback.
+2.  **Translation**: `WiFiEventHandler` converts it to `EVENT_STA_CONNECTED`.
+3.  **Queuing**: Events are posted to `WiFiSyncManager` using `xQueueSendFromISR`.
+4.  **Dispatch**:
+    *   `wifi_task` processes the event.
+    *   Queries `WiFiStateMachine::resolve_event` which returns:
+        *   **Next State**: `CONNECTED_NO_IP`
+        *   **Bits to Set**: `CONNECTED_BIT` (maybe, depending on logic)
+    *   `WiFiManager` updates the state and applies the bits.
 
 ---
 
-## State Machine Diagram (Simplified)
+## State Machine Logic
+
+The state machine is strict. Transitions are defined in `WiFiStateMachine::transition_matrix`.
 
 ```mermaid
 state_diagram
     [*] --> INITIALIZED
-    INITIALIZED --> STARTING : START command
-    STARTING --> STARTED : STA_START event
-    STARTED --> CONNECTING : CONNECT command
-    CONNECTING --> CONNECTED_NO_IP : STA_CONNECTED event
-    CONNECTED_NO_IP --> CONNECTED_GOT_IP : GOT_IP event
-    CONNECTED_GOT_IP --> WAITING_RECONNECT : STA_DISCONNECTED (unintended)
-    WAITING_RECONNECT --> CONNECTING : Timer expired
-    CONNECTED_GOT_IP --> DISCONNECTING : DISCONNECT command
-    DISCONNECTING --> STARTED : STA_DISCONNECTED event
-    STARTED --> STOPPING : STOP command
-    STOPPING --> INITIALIZED : STA_STOP event
+    INITIALIZED --> STARTING : Command: START
+    STARTING --> STARTED : Event: STA_START
+    
+    STARTED --> STOPPING : Command: STOP
+    STOPPING --> INITIALIZED : Event: STA_STOP
+    
+    STARTED --> CONNECTING : Command: CONNECT
+    CONNECTING --> CONNECTED_NO_IP : Event: STA_CONNECTED
+    
+    CONNECTED_NO_IP --> CONNECTED_GOT_IP : Event: GOT_IP
+    
+    CONNECTED_GOT_IP --> DISCONNECTING : Command: DISCONNECT
+    DISCONNECTING --> STARTED : Event: STA_DISCONNECTED
+    
+    %% Error / Retry Paths
+    CONNECTING --> WAITING_RECONNECT : Event: STA_DISCONNECTED / TIMEOUT
+    WAITING_RECONNECT --> CONNECTING : Timer Expired (Retry)
+    WAITING_RECONNECT --> ERROR_CREDENTIALS : Max Retries Reached
 ```

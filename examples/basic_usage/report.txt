@@ -1,0 +1,240 @@
+---------------------------------------------- ESP-IDF Extension for Visual Studio Code report ---------------------------------------------
+OS linux x64 6.8.0-94-generic 
+System environment variable IDF_PYTHON_ENV_PATH 
+ undefined 
+System environment variable PATH 
+ <HOMEPATH>/.local/bin:<HOMEPATH>/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin 
+System environment variable PYTHON 
+ undefined 
+Visual Studio Code Remote name undefined 
+Visual Studio Code version 1.107.0 
+Visual Studio Code language en 
+Visual Studio Code shell /usr/bin/zsh 
+Visual Studio Code app name Antigravity 
+ESP-IDF Extension version 2.0.2 
+Workspace folder <HOMEPATH>/dev/workspaces/idf-components/wifi_manager/examples/basic_usage 
+---------------------------------------------------- Extension configuration settings ------------------------------------------------------
+ESP-ADF Path (idf.customExtraVars["ADF_PATH"]) undefined
+ESP-IDF Path (Project setup IDF_PATH) <HOMEPATH>/dev/esp/esp-idf
+Custom extra paths <HOMEPATH>/.espressif/tools/xtensa-esp-elf-gdb/16.2_20250324/xtensa-esp-elf-gdb/bin:<HOMEPATH>/.espressif/tools/riscv32-esp-elf-gdb/16.2_20250324/riscv32-esp-elf-gdb/bin:<HOMEPATH>/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin:<HOMEPATH>/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin:<HOMEPATH>/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin:<HOMEPATH>/.espressif/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin:<HOMEPATH>/.espressif/tools/cmake/3.30.2/bin:<HOMEPATH>/.espressif/tools/openocd-esp32/v0.12.0-esp32-20250707/openocd-esp32/bin:<HOMEPATH>/.espressif/tools/ninja/1.12.1/:<HOMEPATH>/.espressif/tools/qemu-xtensa/esp_develop_9.0.0_20240606/qemu/bin:<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin:<HOMEPATH>/dev/esp/esp-idf/tools:$PATH
+ESP-IDF Project Setup Variables
+    IDF_PATH: <HOMEPATH>/dev/esp/esp-idf
+    IDF_TOOLS_PATH: <HOMEPATH>/.espressif
+    ESP_IDF_VERSION: 5.5
+    PATH: <HOMEPATH>/.espressif/tools/xtensa-esp-elf-gdb/16.2_20250324/xtensa-esp-elf-gdb/bin:<HOMEPATH>/.espressif/tools/riscv32-esp-elf-gdb/16.2_20250324/riscv32-esp-elf-gdb/bin:<HOMEPATH>/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin:<HOMEPATH>/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin:<HOMEPATH>/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin:<HOMEPATH>/.espressif/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin:<HOMEPATH>/.espressif/tools/cmake/3.30.2/bin:<HOMEPATH>/.espressif/tools/openocd-esp32/v0.12.0-esp32-20250707/openocd-esp32/bin:<HOMEPATH>/.espressif/tools/ninja/1.12.1/:<HOMEPATH>/.espressif/tools/qemu-xtensa/esp_develop_9.0.0_20240606/qemu/bin:<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin:<HOMEPATH>/dev/esp/esp-idf/tools:$PATH
+    OPENOCD_SCRIPTS: <HOMEPATH>/.espressif/tools/openocd-esp32/v0.12.0-esp32-20250707/openocd-esp32/share/openocd/scripts
+    ESP_ROM_ELF_DIR: <HOMEPATH>/.espressif/tools/esp-rom-elfs/20241011/
+    PYTHON: <HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python
+    IDF_PYTHON_ENV_PATH: <HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env
+    IDF_DEACTIVATE_FILE_PATH: /tmp/tmp2215_1yridf_257800
+User extra vars (idf.customExtraVars)
+Virtual environment Python path (computed) <HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python3
+Serial port (idf.port) /dev/ttyACM0
+OpenOCD Configs (idf.openOcdConfigs) board/esp32s3-builtin.cfg
+OpenOCD log level (idf.openOcdDebugLevel) 2
+OpenOCD launch arguments (idf.openOcdLaunchArgs) 
+ESP-IDF Tools Path <HOMEPATH>/.espressif
+Git Path (idf.gitPath) /usr/bin/git
+Notification Mode (idf.notificationMode) All
+Flash type (idf.flashType) JTAG
+Flash partition to use (idf.flashPartitionToUse) all
+-------------------------------------------------------- Configurations access -------------------------------------------------------------
+Access to ESP-ADF Path (idf.customExtraVars["ADF_PATH"]) false
+Access to ESP-IDF Path (Project setup IDF_PATH) true
+Access to ESP-IDF Custom extra paths
+Access to <HOMEPATH>/.espressif/tools/xtensa-esp-elf-gdb/16.2_20250324/xtensa-esp-elf-gdb/bin: true
+Access to <HOMEPATH>/.espressif/tools/riscv32-esp-elf-gdb/16.2_20250324/riscv32-esp-elf-gdb/bin: true
+Access to <HOMEPATH>/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin: true
+Access to <HOMEPATH>/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin: true
+Access to <HOMEPATH>/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin: true
+Access to <HOMEPATH>/.espressif/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin: true
+Access to <HOMEPATH>/.espressif/tools/cmake/3.30.2/bin: true
+Access to <HOMEPATH>/.espressif/tools/openocd-esp32/v0.12.0-esp32-20250707/openocd-esp32/bin: true
+Access to <HOMEPATH>/.espressif/tools/ninja/1.12.1/: true
+Access to <HOMEPATH>/.espressif/tools/qemu-xtensa/esp_develop_9.0.0_20240606/qemu/bin: true
+Access to <HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin: true
+Access to <HOMEPATH>/dev/esp/esp-idf/tools: true
+Access to $PATH: false
+Access to Virtual environment Python path (computed) true
+Access to CMake in environment PATH true
+Access to Ninja in environment PATH true
+Access to ESP-IDF Tools Path true
+-------------------------------------------------------- Configurations has spaces -------------------------------------------------------------
+Spaces in system environment Path false
+Spaces in ESP-ADF Path (idf.customExtraVars["ADF_PATH"]) false
+Spaces in ESP-IDF Path (Project setup IDF_PATH) false
+Spaces in ESP-IDF Custom extra paths
+Spaces in <HOMEPATH>/.espressif/tools/xtensa-esp-elf-gdb/16.2_20250324/xtensa-esp-elf-gdb/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/riscv32-esp-elf-gdb/16.2_20250324/riscv32-esp-elf-gdb/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20241119/riscv32-esp-elf/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/esp32ulp-elf/2.38_20240113/esp32ulp-elf/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/cmake/3.30.2/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/openocd-esp32/v0.12.0-esp32-20250707/openocd-esp32/bin: false
+Spaces in <HOMEPATH>/.espressif/tools/ninja/1.12.1/: false
+Spaces in <HOMEPATH>/.espressif/tools/qemu-xtensa/esp_develop_9.0.0_20240606/qemu/bin: false
+Spaces in <HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin: false
+Spaces in <HOMEPATH>/dev/esp/esp-idf/tools: false
+Spaces in $PATH: false
+Spaces in Virtual environment Python path (computed) false
+Spaces in ESP-IDF Tools Path false
+----------------------------------------------------------- Executables Versions -----------------------------------------------------------
+Git version 2.34.1
+ESP-IDF version 5.5.1
+Python version 3.10.12
+Python's pip version 25.3
+-------------------------------------------------- Project configuration settings ----------------------------------------------------------
+-------------------------------------------------- Python packages in Virtual environment Python path (computed) ---------------------------
+annotated-types version: 0.7.0
+argcomplete version: 3.6.3
+argon2-cffi version: 25.1.0
+argon2-cffi-bindings version: 25.1.0
+bitarray version: 3.8.0
+bitstring version: 4.3.1
+certifi version: 2025.11.12
+cffi version: 2.0.0
+charset-normalizer version: 3.4.4
+click version: 8.1.8
+colorama version: 0.4.6
+construct version: 2.10.70
+cryptography version: 44.0.3
+ecdsa version: 0.19.1
+esp-bool-parser version: 0.2.2
+esp-coredump version: 1.15.0
+esp-debug-backend version: 1.0.3
+esp-idf-diag version: 0.2.0
+esp-idf-kconfig version: 2.5.2
+esp-idf-monitor version: 1.9.0
+esp_idf_nvs_partition_gen version: 0.1.9
+esp_idf_panic_decoder version: 1.4.2
+esp-idf-size version: 1.7.1
+esptool version: 4.11.dev2
+exceptiongroup version: 1.3.1
+filelock version: 3.20.3
+freertos-gdb version: 1.0.4
+idf-build-apps version: 2.14.0
+idf-component-manager version: 2.4.6
+idna version: 3.11
+iniconfig version: 2.3.0
+intelhex version: 2.3.0
+jsonref version: 1.1.0
+markdown-it-py version: 4.0.0
+mdurl version: 0.1.2
+minio version: 7.2.20
+packaging version: 26.0
+pexpect version: 4.9.0
+pip version: 25.3
+pluggy version: 1.6.0
+psutil version: 7.2.1
+ptyprocess version: 0.7.0
+pyclang version: 0.6.3
+pycparser version: 2.23
+pycryptodome version: 3.23.0
+pydantic version: 2.12.5
+pydantic_core version: 2.41.5
+pydantic-settings version: 2.12.0
+pyelftools version: 0.32
+pygdbmi version: 0.11.0.0
+Pygments version: 2.19.2
+pyparsing version: 3.2.5
+pyserial version: 3.5
+pytest version: 9.0.2
+pytest-embedded version: 1.18.2
+pytest-embedded-idf version: 1.18.2
+pytest-embedded-jtag version: 1.18.2
+pytest-embedded-qemu version: 1.18.2
+pytest-embedded-serial version: 1.18.2
+pytest-embedded-serial-esp version: 1.18.2
+pytest-ignore-test-results version: 0.3.0
+pytest-rerunfailures version: 16.1
+pytest-timeout version: 2.4.0
+python-dotenv version: 1.2.1
+python-gitlab version: 7.1.0
+PyYAML version: 6.0.3
+qemu.qmp version: 0.0.3
+reedsolo version: 1.7.0
+requests version: 2.32.5
+requests-file version: 3.0.1
+requests-toolbelt version: 1.0.0
+rich version: 14.3.1
+ruamel.yaml version: 0.18.16
+ruamel.yaml.clib version: 0.2.15
+setuptools version: 80.10.1
+six version: 1.17.0
+toml version: 0.10.2
+tomli version: 2.4.0
+tqdm version: 4.67.1
+truststore version: 0.10.4
+typing_extensions version: 4.15.0
+typing-inspection version: 0.4.2
+urllib3 version: 1.26.20
+websocket-client version: 1.9.0
+---------------------------------------------------- Check ESP-IDF python requirements.txt -------------------------------------------------
+Check ESP-IDF Python packages Python requirements are satisfied.
+---------------------------------------------------- ESP-IDF Setups ------------------------------------------------------------------------
+ESP-IDF setup IDF PATH: <HOMEPATH>/dev/esp/esp-idf
+------- git path: /usr/bin/git
+------- IDF_TOOLS_PATH: <HOMEPATH>/.espressif
+------- version: 5.5.1
+------- python path: <HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python
+------- is valid? true
+--------------------------------------------------------
+---------------------------------------------------- Visual Studio Code launch.json --------------------------------------------------------
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "espidf",
+            "name": "ESP-IDF: Debug",
+            "request": "launch",
+            "targType": "esp32s3",
+            "debugPort": 9998,
+            "initGdbCommands": [
+                "target remote :3333",
+                "symbol-file ./build/wifi_manager_basic_example.elf",
+                "mon reset halt",
+                "flushregs",
+                "thb app_main",
+                "c"
+            ],
+        }
+    ]
+} 
+---------------------------------------------------- Visual Studio Code c_cpp_properties.json ----------------------------------------------
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "ESP32",
+            "compilerPath": "${env:HOME}/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin/xtensa-esp32s3-elf-g++",
+            "compileCommands": "${workspaceFolder}/examples/basic_usage/build/compile_commands.json",
+            "intelliSenseMode": "gcc-x64",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "defines": [
+                "CONFIG_IDF_TARGET_ESP32S3"
+            ],
+            "includePath": [
+                "${workspaceFolder}/include",
+                "${config:idf.espIdfPath}/components/**",
+                "${config:idf.espIdfPath}/components/freertos/**",
+                "${config:idf.espIdfPath}/components/log/include",
+                "${config:idf.espIdfPath}/components/esp_common/include",
+                "${config:idf.espIdfPath}/components/esp_rom/include"
+            ]
+        }
+    ]
+} 
+--------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------- Logfile -----------------------------------------------------------------
+{"message":"<HOMEPATH>/.espressif/tools/eim_idf.json doesn't exists.","stack":"Error: <HOMEPATH>/.espressif/tools/eim_idf.json doesn't exists.\n\tat Sa (/dist/extension.js:2:1602503)\n\tat async /dist/extension.js:2:1601404\n\tat async xa (/dist/extension.js:2:1601364)\n\tat async Op (/dist/extension.js:2:1839781)\n\tat async Zp (/dist/extension.js:2:1846381)\n\tat async jy.n (file:///out/vs/workbench/api/node/extensionHostProcess.js:113:14106)\n\tat async jy.m (file:///out/vs/workbench/api/node/extensionHostProcess.js:113:14069)\n\tat async jy.l (file:///out/vs/workbench/api/node/extensionHostProcess.js:113:13525)","category":"getEimIdfJson","level":"error","timestamp":"2026-02-05T17:35:19.374Z"}
+{"command":"<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python","message":"Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n","stack":"Error: Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n\n\tat /dist/extension.js:2:1479465\n\tat ChildProcess.exithandler (node:child_process:410:7)\n\tat ChildProcess.emit (node:events:518:28)\n\tat ChildProcess.emit (node:domain:489:12)\n\tat maybeClose (node:internal/child_process:1101:16)\n\tat Socket.<anonymous> (node:internal/child_process:456:11)\n\tat Socket.emit (node:events:518:28)\n\tat Socket.emit (node:domain:489:12)\n\tat Pipe.<anonymous> (node:net:346:12)","category":"utils execChildProcess stderr","level":"error","timestamp":"2026-02-05T17:35:22.540Z"}
+{"message":"<HOMEPATH>/.espressif/tools/eim_idf.json doesn't exists.","stack":"Error: <HOMEPATH>/.espressif/tools/eim_idf.json doesn't exists.\n\tat Sa (/dist/extension.js:2:1602503)\n\tat async /dist/extension.js:2:1601404\n\tat async xa (/dist/extension.js:2:1601364)\n\tat async Op (/dist/extension.js:2:1839781)\n\tat async Zp (/dist/extension.js:2:1846381)\n\tat async jy.n (file:///out/vs/workbench/api/node/extensionHostProcess.js:113:14106)\n\tat async jy.m (file:///out/vs/workbench/api/node/extensionHostProcess.js:113:14069)\n\tat async jy.l (file:///out/vs/workbench/api/node/extensionHostProcess.js:113:13525)","category":"getEimIdfJson","level":"error","timestamp":"2026-02-05T17:45:16.265Z"}
+{"command":"<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python","message":"Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n","stack":"Error: Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n\n\tat /dist/extension.js:2:1479465\n\tat ChildProcess.exithandler (node:child_process:410:7)\n\tat ChildProcess.emit (node:events:518:28)\n\tat ChildProcess.emit (node:domain:489:12)\n\tat maybeClose (node:internal/child_process:1101:16)\n\tat Socket.<anonymous> (node:internal/child_process:456:11)\n\tat Socket.emit (node:events:518:28)\n\tat Socket.emit (node:domain:489:12)\n\tat Pipe.<anonymous> (node:net:346:12)","category":"utils execChildProcess stderr","level":"error","timestamp":"2026-02-05T17:45:17.456Z"}
+{"command":"<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python","message":"Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n","stack":"Error: Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n\n\tat /dist/extension.js:2:1479465\n\tat ChildProcess.exithandler (node:child_process:410:7)\n\tat ChildProcess.emit (node:events:519:28)\n\tat ChildProcess.emit (node:domain:489:12)\n\tat maybeClose (node:internal/child_process:1101:16)\n\tat Socket.<anonymous> (node:internal/child_process:456:11)\n\tat Socket.emit (node:events:519:28)\n\tat Socket.emit (node:domain:489:12)\n\tat Pipe.<anonymous> (node:net:346:12)","category":"utils execChildProcess stderr","level":"error","timestamp":"2026-02-09T04:40:56.440Z"}
+{"message":"Cannot access filePath: undefined","stack":"TypeError: The \"path\" argument must be of type string or an instance of Buffer or URL. Received undefined\n\tat Object.accessSync (node:fs:243:18)\n\tat t.accessSync (node:electron/js2c/node_init:2:9395)\n\tat Bi (<HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1475925)\n\tat <HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1607952\n\tat Pa (<HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1608711)\n\tat async <HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1907928","category":"src utils canAccessFile","level":"error","timestamp":"2026-02-09T04:52:35.934Z"}
+{"message":"Cannot access filePath: $PATH","stack":"Error: ENOENT: no such file or directory, access '$PATH'\n\tat Object.accessSync (node:fs:243:11)\n\tat t.accessSync (node:electron/js2c/node_init:2:9395)\n\tat Bi (<HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1475925)\n\tat <HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1608452\n\tat Pa (<HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1608711)\n\tat async <HOMEPATH>/.antigravity/extensions/espressif.esp-idf-extension-2.0.2-universal/dist/extension.js:2:1907928","category":"src utils canAccessFile","level":"error","timestamp":"2026-02-09T04:52:35.936Z"}
+{"command":"<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python","message":"Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n","stack":"Error: Not using an unsupported version of tool cmake found in PATH: 3.22.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\nNot using an unsupported version of tool ninja found in PATH: 1.10.1. To use it, run '<HOMEPATH>/.espressif/python_env/idf5.5_py3.10_env/bin/python <HOMEPATH>/dev/esp/esp-idf/tools/idf_tools.py export --prefer-system'\n\n\tat /dist/extension.js:2:1479465\n\tat ChildProcess.exithandler (node:child_process:410:7)\n\tat ChildProcess.emit (node:events:519:28)\n\tat ChildProcess.emit (node:domain:489:12)\n\tat maybeClose (node:internal/child_process:1101:16)\n\tat Socket.<anonymous> (node:internal/child_process:456:11)\n\tat Socket.emit (node:events:519:28)\n\tat Socket.emit (node:domain:489:12)\n\tat Pipe.<anonymous> (node:net:346:12)","category":"utils execChildProcess stderr","level":"error","timestamp":"2026-02-09T04:52:37.539Z"}
+
+--------------------------------------------------------------------------------------------------------------------------------------------

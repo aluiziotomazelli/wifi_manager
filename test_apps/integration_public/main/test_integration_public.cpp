@@ -1,16 +1,11 @@
-#include <stdio.h>
-// #include <string.h>
-
 #include "esp_log_level.h"
-// #include "esp_timer.h"
-// #include "esp_wifi.h"
 #include "unity.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <stdio.h>
 
 // Include secrets from common
-#include "wifi_manager.hpp"
 #include "../../common/secrets.h"
+
+#include "wifi_manager.hpp"
 
 TEST_CASE("LOG on", "[wifi][log]")
 {

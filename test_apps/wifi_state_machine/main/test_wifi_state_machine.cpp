@@ -1,4 +1,3 @@
-#include "esp_timer.h"
 #include "unity.h"
 #include "wifi_state_machine.hpp"
 
