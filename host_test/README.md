@@ -1,33 +1,33 @@
 # WiFi Manager Host Tests
 
-Esta pasta contém os testes unitários e de integração configurados para rodar diretamente no Linux Host, utilizando mocks para o hardware e a implementação real do NVS para persistência.
+This folder contains unit and integration tests configured to run directly on a Linux Host, using hardware mocks and the real NVS implementation for persistence.
 
-## Estrutura
+## Structure
 
-- `common/`: Contém utilitários compartilhados, stubs globais e mocks manuais para as APIs do ESP-IDF.
-- `wifi_*/`: Projetos individuais de teste para cada sub-componente.
-- `integration_internal/`: Testes de integração da lógica interna da FSM e gerenciamento de filas.
-- `pytest_host_tests.py`: Script de automação para build e execução de toda a suíte.
+- `common/`: Contains shared utilities, global stubs, and manual mocks for ESP-IDF APIs.
+- `wifi_*/`: Individual test projects for each sub-component.
+- `integration_internal/`: Integration tests for internal FSM logic and queue management.
+- `pytest_host_tests.py`: Automation script for building and running the entire suite.
 
-## Como Executar
+## How to Run
 
-Certifique-se de que o ambiente do ESP-IDF está carregado (`. export.sh`).
+Ensure the ESP-IDF environment is loaded (`. export.sh`).
 
-### Executar todos os testes
+### Run all tests
 ```bash
 python -m pytest pytest_host_tests.py
 ```
 
-### Executar um teste específico
+### Run a specific test
 ```bash
-cd <pasta_do_teste>
+cd <test_folder>
 idf.py --preview set-target linux
 idf.py build
 ./build/*.elf
 ```
 
-## Benefícios desta Arquitetura
-1. **Isolamento**: Cada suíte roda em seu próprio projeto, evitando conflitos de mocks.
-2. **Velocidade**: Execução em milissegundos sem necessidade de flash no hardware.
-3. **Persistência Real**: O uso do `nvs_flash` de host permite validar se as credenciais realmente sobrevivem a reinicializações simuladas.
-4. **CI-Ready**: O script `pytest` gera relatórios compatíveis com ferramentas de CI como GitHub Actions.
+## Benefits of this Architecture
+1. **Isolation**: Each suite runs in its own project, avoiding mock conflicts.
+2. **Speed**: Execution in milliseconds without the need to flash hardware.
+3. **Real Persistence**: The use of host `nvs_flash` allows validating if credentials actually survive simulated reboots.
+4. **CI-Ready**: The `pytest` script generates reports compatible with CI tools like GitHub Actions.
