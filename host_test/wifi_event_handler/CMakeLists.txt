@@ -14,4 +14,4 @@ set(COMPONENTS main wifi_manager nvs_flash esp_event esp_netif esp_wifi lwip uni
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project(wifi_config_storage_host_test)
+project(wifi_event_handler_host_test)
