@@ -1,38 +1,11 @@
 #include "nvs_flash.h"
 #include "unity.h"
 #include "wifi_driver_hal.hpp"
-
-// Mock headers
-extern "C" {
-#include "Mockesp_wifi.h"
-#include "Mockesp_netif.h"
-#include "Mockesp_event.h"
-
-// Manual mocks for functions not covered or needing special behavior
-esp_netif_t* esp_netif_create_default_wifi_sta(void) { return (esp_netif_t*)0x1234; }
-void esp_netif_destroy_default_wifi(void *esp_netif) { }
-}
+#include "host_test_common.hpp"
 
 void setUp(void)
 {
-    // Set default behavior for mocks to return ESP_OK and ignore calls
-    esp_wifi_init_IgnoreAndReturn(ESP_OK);
-    esp_wifi_set_mode_IgnoreAndReturn(ESP_OK);
-    esp_wifi_set_config_IgnoreAndReturn(ESP_OK);
-    esp_wifi_get_config_IgnoreAndReturn(ESP_OK);
-    esp_wifi_start_IgnoreAndReturn(ESP_OK);
-    esp_wifi_stop_IgnoreAndReturn(ESP_OK);
-    esp_wifi_connect_IgnoreAndReturn(ESP_OK);
-    esp_wifi_disconnect_IgnoreAndReturn(ESP_OK);
-    esp_wifi_restore_IgnoreAndReturn(ESP_OK);
-    esp_wifi_deinit_IgnoreAndReturn(ESP_OK);
-
-    esp_netif_init_IgnoreAndReturn(ESP_OK);
-    esp_netif_get_handle_from_ifkey_IgnoreAndReturn(NULL);
-
-    esp_event_loop_create_default_IgnoreAndReturn(ESP_OK);
-    esp_event_handler_instance_register_IgnoreAndReturn(ESP_OK);
-    esp_event_handler_instance_unregister_IgnoreAndReturn(ESP_OK);
+    host_test_setup_common_mocks();
 }
 
 void tearDown(void)

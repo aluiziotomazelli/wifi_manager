@@ -1,15 +1,11 @@
 #include "unity.h"
 #include "wifi_state_machine.hpp"
 #include "freertos/FreeRTOS.h"
-
-// Mock headers
-extern "C" {
-#include "Mockesp_timer.h"
-}
+#include "host_test_common.hpp"
 
 void setUp(void)
 {
-    esp_timer_get_time_IgnoreAndReturn(0);
+    host_test_setup_common_mocks();
 }
 
 void tearDown(void)

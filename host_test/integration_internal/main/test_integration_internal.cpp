@@ -12,42 +12,11 @@
 #include "esp_log.h"
 #include "test_wifi_manager_accessor.hpp"
 #include "wifi_manager.hpp"
+#include "host_test_common.hpp"
 
-// Mock headers
-extern "C" {
-#include "Mockesp_wifi.h"
-#include "Mockesp_netif.h"
-#include "Mockesp_event.h"
-#include "Mockesp_timer.h"
-
-// Manual mocks for functions not covered or needing special behavior
-esp_netif_t* esp_netif_create_default_wifi_sta(void) { return (esp_netif_t*)0x1234; }
-void esp_netif_destroy_default_wifi(void *esp_netif) { }
-}
-
-ESP_EVENT_DEFINE_BASE(WIFI_EVENT);
-ESP_EVENT_DEFINE_BASE(IP_EVENT);
-
-// Global state for Wi-Fi config stub
-static wifi_config_t s_wifi_config;
-static bool s_auto_simulate_events = true;
-
-esp_err_t my_esp_wifi_set_config(wifi_interface_t interface, wifi_config_t* conf, int cmock_num_calls) {
-    if (conf) {
-        memcpy(&s_wifi_config, conf, sizeof(wifi_config_t));
-    }
-    return ESP_OK;
-}
-
-esp_err_t my_esp_wifi_get_config(wifi_interface_t interface, wifi_config_t* conf, int cmock_num_calls) {
-    if (conf) {
-        memcpy(conf, &s_wifi_config, sizeof(wifi_config_t));
-    }
-    return ESP_OK;
-}
-
-esp_err_t my_esp_wifi_start(int cmock_num_calls) {
-    if (s_auto_simulate_events) {
+// Wi-Fi stubs with auto event simulation for integration tests
+esp_err_t integration_esp_wifi_start(int cmock_num_calls) {
+    if (g_host_test_auto_simulate_events) {
         WiFiManager &wm = WiFiManager::get_instance();
         WiFiManagerTestAccessor accessor(wm);
         accessor.test_simulate_wifi_event(WIFI_EVENT_STA_START);
@@ -55,8 +24,8 @@ esp_err_t my_esp_wifi_start(int cmock_num_calls) {
     return ESP_OK;
 }
 
-esp_err_t my_esp_wifi_stop(int cmock_num_calls) {
-    if (s_auto_simulate_events) {
+esp_err_t integration_esp_wifi_stop(int cmock_num_calls) {
+    if (g_host_test_auto_simulate_events) {
         WiFiManager &wm = WiFiManager::get_instance();
         WiFiManagerTestAccessor accessor(wm);
         accessor.test_simulate_wifi_event(WIFI_EVENT_STA_STOP);
@@ -64,8 +33,8 @@ esp_err_t my_esp_wifi_stop(int cmock_num_calls) {
     return ESP_OK;
 }
 
-esp_err_t my_esp_wifi_connect(int cmock_num_calls) {
-    if (s_auto_simulate_events) {
+esp_err_t integration_esp_wifi_connect(int cmock_num_calls) {
+    if (g_host_test_auto_simulate_events) {
         WiFiManager &wm = WiFiManager::get_instance();
         WiFiManagerTestAccessor accessor(wm);
         accessor.test_simulate_wifi_event(WIFI_EVENT_STA_CONNECTED);
@@ -76,29 +45,12 @@ esp_err_t my_esp_wifi_connect(int cmock_num_calls) {
 
 void setUp(void)
 {
-    memset(&s_wifi_config, 0, sizeof(wifi_config_t));
-    s_auto_simulate_events = true;
+    host_test_setup_common_mocks();
 
-    // Default mock behaviors
-    esp_wifi_init_IgnoreAndReturn(ESP_OK);
-    esp_wifi_set_mode_IgnoreAndReturn(ESP_OK);
-    esp_wifi_set_config_Stub(my_esp_wifi_set_config);
-    esp_wifi_get_config_Stub(my_esp_wifi_get_config);
-    esp_wifi_start_Stub(my_esp_wifi_start);
-    esp_wifi_stop_Stub(my_esp_wifi_stop);
-    esp_wifi_connect_Stub(my_esp_wifi_connect);
-    esp_wifi_disconnect_IgnoreAndReturn(ESP_OK);
-    esp_wifi_restore_IgnoreAndReturn(ESP_OK);
-    esp_wifi_deinit_IgnoreAndReturn(ESP_OK);
-
-    esp_netif_init_IgnoreAndReturn(ESP_OK);
-    esp_netif_get_handle_from_ifkey_IgnoreAndReturn(NULL);
-
-    esp_event_loop_create_default_IgnoreAndReturn(ESP_OK);
-    esp_event_handler_instance_register_IgnoreAndReturn(ESP_OK);
-    esp_event_handler_instance_unregister_IgnoreAndReturn(ESP_OK);
-
-    esp_timer_get_time_IgnoreAndReturn(0);
+    // Override default start/stop/connect for integration tests
+    esp_wifi_start_Stub(integration_esp_wifi_start);
+    esp_wifi_stop_Stub(integration_esp_wifi_stop);
+    esp_wifi_connect_Stub(integration_esp_wifi_connect);
 }
 
 void tearDown(void)
@@ -149,7 +101,7 @@ TEST_CASE("Internal: Queue Behaviors", "[wifi][internal][stress]")
 TEST_CASE("Internal: Connection Flow Simulation", "[wifi][internal][state]")
 {
     printf("\n=== Test: Connection Flow Simulation ===\n");
-    s_auto_simulate_events = false; // We want to control events manually here
+    g_host_test_auto_simulate_events = false; // We want to control events manually here
 
     nvs_flash_erase();
     nvs_flash_init();
@@ -198,13 +150,12 @@ TEST_CASE("Internal: Auto-Reconnect Simulation", "[wifi][internal][reconnect]")
     WiFiManager &wm = WiFiManager::get_instance();
     wm.deinit();
     wm.init();
-    wm.start(5000); // Should work with auto stub
+    wm.start(5000);
     WiFiManagerTestAccessor accessor(wm);
 
     wm.set_credentials("ReconnectSSID", "pass");
 
     accessor.test_send_connect_command(false);
-    // Already simulated by auto stub if s_auto_simulate_events is true
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(WiFiManager::State::CONNECTED_GOT_IP, wm.get_state());
 

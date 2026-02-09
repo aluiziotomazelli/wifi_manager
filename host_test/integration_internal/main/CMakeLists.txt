@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "test_integration_internal.cpp"
         "test_main.cpp"
+        "../../common/host_test_common.cpp"
     INCLUDE_DIRS
         "."
         "../../common"

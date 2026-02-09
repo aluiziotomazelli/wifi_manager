@@ -3,8 +3,18 @@
 #include "wifi_types.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "host_test_common.hpp"
 
 using namespace wifi_manager;
+
+void setUp(void)
+{
+    host_test_setup_common_mocks();
+}
+
+void tearDown(void)
+{
+}
 
 TEST_CASE("WiFiSyncManager: Initialization", "[sync]")
 {

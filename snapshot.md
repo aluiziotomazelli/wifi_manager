@@ -27,27 +27,39 @@ Sempre que iniciar uma nova sessão, você deve carregar o ambiente do IDF:
 
 ## 3. Dependências do Sistema (Linux)
 
-Certifique-se de que seu sistema possui as dependências necessárias para compilação em host:
+Certifique-se de que seu sistema possui as dependências necessárias para compilação em host e automação:
 
 ```bash
 sudo apt-get update
 sudo apt-get install -y git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0 libbsd-dev ruby
 ```
 
-## 4. Executando os Testes de Host
-
-Existem vários testes de host disponíveis na pasta `host_test/`. Para executar qualquer um deles (por exemplo, `integration_internal`):
+### Instalar dependências de teste do Python:
 
 ```bash
-# Navegar até a pasta do teste
-cd host_test/integration_internal
+python -m pip install pytest
+```
 
-# Garantir que o target está como linux
+## 4. Executando os Testes de Host
+
+### Modo Automático (Recomendado)
+
+Para executar todos os testes de host de uma vez:
+
+```bash
+cd host_test
+python -m pytest pytest_host_tests.py
+```
+
+### Modo Manual
+
+Para executar um teste específico manualmente:
+
+```bash
+cd host_test/<nome_do_teste>
 idf.py --preview set-target linux
-
-# Build e execução
 idf.py build
-./build/integration_internal_host_test.elf
+./build/*.elf
 ```
 
 Testes disponíveis:

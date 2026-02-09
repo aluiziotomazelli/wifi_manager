@@ -4,12 +4,18 @@
 #include "wifi_types.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-
-// Define event bases since mocks might not provide them
-ESP_EVENT_DEFINE_BASE(WIFI_EVENT);
-ESP_EVENT_DEFINE_BASE(IP_EVENT);
+#include "host_test_common.hpp"
 
 using namespace wifi_manager;
+
+void setUp(void)
+{
+    host_test_setup_common_mocks();
+}
+
+void tearDown(void)
+{
+}
 
 TEST_CASE("WiFiEventHandler: Translator Test", "[event]")
 {
