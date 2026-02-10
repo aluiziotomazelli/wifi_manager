@@ -61,10 +61,11 @@ public:
     void reset_retries();
 
     /**
-     * @brief Handles a suspect failure (potential wrong password).
+     * @brief Handles a suspect failure (potential wrong password or bad signal).
+     * @param rssi The RSSI level at the time of disconnection.
      * @return true if too many suspect failures (transits to ERROR_CREDENTIALS).
      */
-    bool handle_suspect_failure();
+    bool handle_suspect_failure(int8_t rssi);
 
     /**
      * @brief Calculates and sets the next reconnection time.
@@ -94,6 +95,14 @@ public:
     TickType_t get_wait_ticks() const;
     bool is_sta_ready() const;
     bool is_active() const;
+
+    static constexpr int8_t RSSI_THRESHOLD_GOOD   = -55;
+    static constexpr int8_t RSSI_THRESHOLD_MEDIUM = -67;
+    static constexpr int8_t RSSI_THRESHOLD_WEAK   = -80;
+
+    static constexpr uint32_t RETRY_LIMIT_GOOD   = 1;
+    static constexpr uint32_t RETRY_LIMIT_MEDIUM = 2;
+    static constexpr uint32_t RETRY_LIMIT_WEAK   = 5;
 
 private:
     State m_current_state;

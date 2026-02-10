@@ -163,10 +163,30 @@ void WiFiStateMachine::reset_retries()
     m_suspect_retry_count = 0;
 }
 
-bool WiFiStateMachine::handle_suspect_failure()
+bool WiFiStateMachine::handle_suspect_failure(int8_t rssi)
 {
     m_suspect_retry_count++;
-    if (m_suspect_retry_count >= 3) {
+
+    uint32_t limit = 0;
+
+    // Dynamic retry limit based on signal quality (RSSI)
+    // Better signal -> fewer attempts before assuming wrong credentials
+    // Critical signal -> infinite attempts (avoid false positive credential errors)
+    if (rssi >= RSSI_THRESHOLD_GOOD) {
+        limit = RETRY_LIMIT_GOOD;
+    }
+    else if (rssi >= RSSI_THRESHOLD_MEDIUM) {
+        limit = RETRY_LIMIT_MEDIUM;
+    }
+    else if (rssi >= RSSI_THRESHOLD_WEAK) {
+        limit = RETRY_LIMIT_WEAK;
+    }
+    else {
+        // Critical signal: never transition to ERROR_CREDENTIALS
+        return false;
+    }
+
+    if (m_suspect_retry_count >= limit) {
         m_current_state = State::ERROR_CREDENTIALS;
         return true;
     }

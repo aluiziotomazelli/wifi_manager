@@ -43,7 +43,7 @@ esp_err_t WiFiConfigStorage::save_credentials(const std::string &ssid, const std
     memcpy(wifi_config.sta.password, password.c_str(), pass_len);
 
     wifi_config.sta.scan_method        = WIFI_ALL_CHANNEL_SCAN;
-    wifi_config.sta.failure_retry_cnt  = 2;
+    wifi_config.sta.failure_retry_cnt  = 0;
     wifi_config.sta.pmf_cfg.capable    = true;
     wifi_config.sta.pmf_cfg.required   = false;
     wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
@@ -170,7 +170,7 @@ esp_err_t WiFiConfigStorage::ensure_config_fallback()
             memcpy(wifi_config.sta.password, CONFIG_WIFI_PASSWORD, pass_len);
 
             wifi_config.sta.scan_method        = WIFI_ALL_CHANNEL_SCAN;
-            wifi_config.sta.failure_retry_cnt  = 2;
+            wifi_config.sta.failure_retry_cnt  = 0;
             wifi_config.sta.pmf_cfg.capable    = true;
             wifi_config.sta.pmf_cfg.required   = false;
             wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;

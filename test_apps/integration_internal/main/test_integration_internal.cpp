@@ -124,7 +124,7 @@ TEST_CASE("Internal: Auto-Reconnect Simulation", "[wifi][internal][reconnect]")
     wm.deinit();
 }
 
-TEST_CASE("Internal: Immediate Invalidation", "[wifi][internal][reconnect]")
+TEST_CASE("Internal: Immediate Invalidation (Good Signal)", "[wifi][internal][reconnect]")
 {
     WiFiManager &wm = WiFiManager::get_instance();
     wm.deinit();
@@ -133,7 +133,8 @@ TEST_CASE("Internal: Immediate Invalidation", "[wifi][internal][reconnect]")
     WiFiManagerTestAccessor accessor(wm);
 
     wm.set_credentials("InvalidPassSSID", "wrong");
-    accessor.test_simulate_disconnect(WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT);
+    // GOOD signal (>= -55) -> 1 strike limit
+    accessor.test_simulate_disconnect(WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT, -50);
     vTaskDelay(pdMS_TO_TICKS(100));
 
     TEST_ASSERT_EQUAL(WiFiManager::State::ERROR_CREDENTIALS, wm.get_state());
@@ -142,7 +143,7 @@ TEST_CASE("Internal: Immediate Invalidation", "[wifi][internal][reconnect]")
     wm.deinit();
 }
 
-TEST_CASE("Internal: 3 Strikes", "[wifi][internal][reconnect]")
+TEST_CASE("Internal: Dynamic Retries (Medium/Weak Signal)", "[wifi][internal][reconnect]")
 {
     WiFiManager &wm = WiFiManager::get_instance();
     wm.deinit();
@@ -150,17 +151,49 @@ TEST_CASE("Internal: 3 Strikes", "[wifi][internal][reconnect]")
     wm.start(5000);
     WiFiManagerTestAccessor accessor(wm);
 
-    wm.set_credentials("SuspectSSID", "pass");
+    printf("Testing Medium Signal (-60 dBm) -> 2 strikes limit\n");
+    wm.set_credentials("MediumSSID", "pass");
 
-    for (int i = 1; i <= 2; i++) {
-        accessor.test_simulate_disconnect(WIFI_REASON_CONNECTION_FAIL);
+    accessor.test_simulate_disconnect(WIFI_REASON_CONNECTION_FAIL, -60);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state());
+
+    accessor.test_simulate_disconnect(WIFI_REASON_CONNECTION_FAIL, -60);
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(WiFiManager::State::ERROR_CREDENTIALS, wm.get_state());
+
+    printf("Testing Weak Signal (-75 dBm) -> 5 strikes limit\n");
+    wm.set_credentials("WeakSSID", "pass"); // Resets suspect retries
+
+    for (int i = 1; i <= 4; i++) {
+        accessor.test_simulate_disconnect(WIFI_REASON_AUTH_FAIL, -75);
         vTaskDelay(pdMS_TO_TICKS(100));
         TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state());
     }
 
-    accessor.test_simulate_disconnect(WIFI_REASON_CONNECTION_FAIL);
+    accessor.test_simulate_disconnect(WIFI_REASON_AUTH_FAIL, -75);
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(WiFiManager::State::ERROR_CREDENTIALS, wm.get_state());
+
+    wm.deinit();
+}
+
+TEST_CASE("Internal: Infinite Retries (Critical Signal)", "[wifi][internal][reconnect]")
+{
+    WiFiManager &wm = WiFiManager::get_instance();
+    wm.deinit();
+    wm.init();
+    wm.start(5000);
+    WiFiManagerTestAccessor accessor(wm);
+
+    wm.set_credentials("CriticalSSID", "pass");
+
+    printf("Testing Critical Signal (-85 dBm) -> Infinite retries\n");
+    for (int i = 1; i <= 10; i++) {
+        accessor.test_simulate_disconnect(WIFI_REASON_HANDSHAKE_TIMEOUT, -85);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state());
+    }
 
     wm.deinit();
 }
@@ -357,14 +390,20 @@ TEST_CASE("Internal: RSSI Quality Logs", "[wifi][internal][quality]")
     WiFiManagerTestAccessor accessor(wm);
 
     wm.set_credentials("QualityTest", "pass");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -95); // CRITICAL
-    vTaskDelay(pdMS_TO_TICKS(100));
-    TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state());
-
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -80); // MEDIUM
+    printf("Simulating CRITICAL signal logs...\n");
+    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -95);
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -50); // GOOD
+    printf("Simulating WEAK signal logs...\n");
+    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -75);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    printf("Simulating MEDIUM signal logs...\n");
+    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -60);
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    printf("Simulating GOOD signal logs...\n");
+    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -50);
     vTaskDelay(pdMS_TO_TICKS(100));
 
     wm.deinit();

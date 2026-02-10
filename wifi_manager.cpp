@@ -12,9 +12,6 @@
 
 static const char *TAG = "WiFiManager";
 
-constexpr int8_t RSSI_CRITICAL = -85;
-constexpr int8_t RSSI_GOOD     = -65;
-
 // =================================================================================================
 // Singleton and Constructor/Destructor
 // =================================================================================================
@@ -708,7 +705,11 @@ void WiFiManager::handle_event(const Message &msg, State state)
     switch (msg.event) {
     case EventId::STA_DISCONNECTED:
     {
-        const char *quality = (msg.rssi <= RSSI_CRITICAL) ? "CRITICAL" : (msg.rssi >= RSSI_GOOD ? "GOOD" : "MEDIUM");
+        const char *quality = (msg.rssi >= WiFiStateMachine::RSSI_THRESHOLD_GOOD)   ? "GOOD"
+                              : (msg.rssi >= WiFiStateMachine::RSSI_THRESHOLD_MEDIUM) ? "MEDIUM"
+                              : (msg.rssi >= WiFiStateMachine::RSSI_THRESHOLD_WEAK)   ? "WEAK"
+                                                                                      : "CRITICAL";
+
         ESP_LOGI(TAG, "Task Event: STA_DISCONNECTED (reason: %d, RSSI=%d dBm [%s])", msg.reason, msg.rssi, quality);
 
         // Case A: Disconnection was intended or while driver is inactive
@@ -725,26 +726,26 @@ void WiFiManager::handle_event(const Message &msg, State state)
             break;
         }
 
-        // Case C: Definite credential failure
-        if (msg.reason == WIFI_REASON_AUTH_FAIL || msg.reason == WIFI_REASON_802_1X_AUTH_FAILED ||
-            msg.reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT || msg.reason == WIFI_REASON_HANDSHAKE_TIMEOUT) {
-            ESP_LOGE(TAG, "Authentication failed (Reason: %d).", msg.reason);
-            state_machine.transition_to(State::ERROR_CREDENTIALS);
-            this->storage.save_valid_flag(false);
-            sync_manager.set_bits(wifi_manager::CONNECT_FAILED_BIT);
-            break;
-        }
+        // Case C: Definite credential failure (Currently NONE, all moved to Suspect to be RSSI-aware)
+        // We could keep some here if we were sure they are NEVER caused by bad signal.
 
         // Case D: Suspect failure (potential wrong password or bad signal)
-        if (msg.reason == WIFI_REASON_CONNECTION_FAIL) {
-            if (state_machine.handle_suspect_failure()) {
-                ESP_LOGE(TAG, "Too many suspect failures. Invalidating credentials.");
+        // These reasons can be caused by both wrong credentials and poor signal/interference.
+        if (msg.reason == WIFI_REASON_AUTH_FAIL || msg.reason == WIFI_REASON_802_1X_AUTH_FAILED ||
+            msg.reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT || msg.reason == WIFI_REASON_HANDSHAKE_TIMEOUT ||
+            msg.reason == WIFI_REASON_CONNECTION_FAIL) {
+
+            if (state_machine.handle_suspect_failure(msg.rssi)) {
+                ESP_LOGE(TAG, "Authentication failed or too many suspect failures (Reason: %d). Invalidating.",
+                         msg.reason);
                 this->storage.save_valid_flag(false);
                 // State machine already transited to ERROR_CREDENTIALS in handle_suspect_failure
             }
             else {
                 uint32_t delay_ms;
                 state_machine.calculate_next_backoff(delay_ms);
+                ESP_LOGW(TAG, "Suspect failure (Reason: %d), retrying due to poor signal or allowed attempts...",
+                         msg.reason);
                 // State machine already transited to WAITING_RECONNECT in calculate_next_backoff
             }
             sync_manager.set_bits(wifi_manager::CONNECT_FAILED_BIT);

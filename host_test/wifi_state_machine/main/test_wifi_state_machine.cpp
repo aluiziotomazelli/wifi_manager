@@ -48,15 +48,39 @@ TEST_CASE("WiFiStateMachine: Event Resolution", "[wifi_fsm]")
     TEST_ASSERT_EQUAL(WiFiStateMachine::State::STARTED, outcome.next_state);
 }
 
-TEST_CASE("WiFiStateMachine: Suspect Failure Handling", "[wifi_fsm]")
+TEST_CASE("WiFiStateMachine: Suspect Failure Handling (Dynamic RSSI)", "[wifi_fsm]")
 {
     WiFiStateMachine fsm;
-    fsm.transition_to(WiFiStateMachine::State::CONNECTING);
 
-    TEST_ASSERT_FALSE(fsm.handle_suspect_failure()); // 1st
-    TEST_ASSERT_FALSE(fsm.handle_suspect_failure()); // 2nd
-    TEST_ASSERT_TRUE(fsm.handle_suspect_failure());  // 3rd
+    printf("Testing Good Signal (-50 dBm) -> limit 1\n");
+    fsm.reset_retries();
+    fsm.transition_to(WiFiStateMachine::State::CONNECTING);
+    TEST_ASSERT_TRUE(fsm.handle_suspect_failure(-50));
     TEST_ASSERT_EQUAL(WiFiStateMachine::State::ERROR_CREDENTIALS, fsm.get_current_state());
+
+    printf("Testing Medium Signal (-60 dBm) -> limit 2\n");
+    fsm.reset_retries();
+    fsm.transition_to(WiFiStateMachine::State::CONNECTING);
+    TEST_ASSERT_FALSE(fsm.handle_suspect_failure(-60));
+    TEST_ASSERT_TRUE(fsm.handle_suspect_failure(-60));
+    TEST_ASSERT_EQUAL(WiFiStateMachine::State::ERROR_CREDENTIALS, fsm.get_current_state());
+
+    printf("Testing Weak Signal (-75 dBm) -> limit 5\n");
+    fsm.reset_retries();
+    fsm.transition_to(WiFiStateMachine::State::CONNECTING);
+    for (int i = 0; i < 4; i++) {
+        TEST_ASSERT_FALSE(fsm.handle_suspect_failure(-75));
+    }
+    TEST_ASSERT_TRUE(fsm.handle_suspect_failure(-75));
+    TEST_ASSERT_EQUAL(WiFiStateMachine::State::ERROR_CREDENTIALS, fsm.get_current_state());
+
+    printf("Testing Critical Signal (-85 dBm) -> infinite\n");
+    fsm.reset_retries();
+    fsm.transition_to(WiFiStateMachine::State::CONNECTING);
+    for (int i = 0; i < 50; i++) {
+        TEST_ASSERT_FALSE(fsm.handle_suspect_failure(-85));
+    }
+    TEST_ASSERT_EQUAL(WiFiStateMachine::State::CONNECTING, fsm.get_current_state());
 }
 
 TEST_CASE("WiFiStateMachine: Backoff Calculation", "[wifi_fsm]")
