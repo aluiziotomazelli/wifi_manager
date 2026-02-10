@@ -8,14 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [1.1.0] - 2026-02-06
+## [1.1.0] - 2026-02-10
 
 ### Features
  - New declarative FSM (Finite State Machine) architecture using transition matrices.  
+ - **Dynamic Reconnection Strategy**: Implemented RSSI-aware retry limits to distinguish between poor signal and wrong credentials.
  
 ### Enhancements
  - Improved connection robustness with signal quality (RSSI) awareness.  
  - Implemented exponential backoff for reconnection attempts.  
+ - **Enhanced Error Handling**: Handshake and authentication failures are now treated as "suspect", allowing more retries in weak signal conditions before invalidating credentials.
+ - **Optimized Connection Speed**: Set driver's internal failure retries to zero, giving the WiFiManager FSM immediate control over reconnection logic.
 
 ### Refactor
  - Unified command and event handling into a serialized message queue.  
