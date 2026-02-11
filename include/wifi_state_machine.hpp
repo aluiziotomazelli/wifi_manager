@@ -96,13 +96,23 @@ public:
     bool is_sta_ready() const;
     bool is_active() const;
 
+    // RSSI thresholds (dBm):
+    // GOOD   (-55):  Strong signal, likely credential issue
+    // MEDIUM (-67):  Moderate signal, ambiguous failure cause
+    // WEAK   (-80):  Weak signal, likely connectivity issue
+    // < -80: Critical, always assume signal problem
     static constexpr int8_t RSSI_THRESHOLD_GOOD   = -55;
     static constexpr int8_t RSSI_THRESHOLD_MEDIUM = -67;
     static constexpr int8_t RSSI_THRESHOLD_WEAK   = -80;
 
+    // Retry limits based on signal quality
     static constexpr uint32_t RETRY_LIMIT_GOOD   = 1;
     static constexpr uint32_t RETRY_LIMIT_MEDIUM = 2;
     static constexpr uint32_t RETRY_LIMIT_WEAK   = 5;
+
+    // Backoff parameters
+    static constexpr uint32_t MAX_BACKOFF_EXPONENT = 8;
+    static constexpr uint32_t MAX_BACKOFF_MS       = 300000UL; // 5 minutes
 
 private:
     State m_current_state;

@@ -197,14 +197,14 @@ void WiFiStateMachine::calculate_next_backoff(uint32_t &delay_ms_out)
 {
     m_retry_count++;
 
-    // Limit exponent to avoid overflow (2^8 = 256)
+    // Limit exponent to avoid overflow
     uint32_t exponent = (m_retry_count > 0) ? (m_retry_count - 1) : 0;
-    if (exponent > 8)
-        exponent = 8;
+    if (exponent > MAX_BACKOFF_EXPONENT)
+        exponent = MAX_BACKOFF_EXPONENT;
 
     uint32_t delay_ms = (1UL << exponent) * 1000UL;
-    if (delay_ms > 300000UL)
-        delay_ms = 300000UL; // Cap at 5 minutes
+    if (delay_ms > MAX_BACKOFF_MS)
+        delay_ms = MAX_BACKOFF_MS; // Cap at MAX_BACKOFF_MS
 
     delay_ms_out        = delay_ms;
     m_next_reconnect_ms = (esp_timer_get_time() / 1000) + delay_ms;
@@ -234,6 +234,10 @@ TickType_t WiFiStateMachine::get_wait_ticks() const
     // If the reconnect time hasn't arrived yet, calculate how long to wait
     if (m_next_reconnect_ms > now_ms) {
         uint64_t wait_ms = m_next_reconnect_ms - now_ms;
+        // Sanity check: avoid converting unreasonably large values
+        if (wait_ms > UINT32_MAX / portTICK_PERIOD_MS) {
+            return portMAX_DELAY;
+        }
         return pdMS_TO_TICKS(wait_ms);
     }
 

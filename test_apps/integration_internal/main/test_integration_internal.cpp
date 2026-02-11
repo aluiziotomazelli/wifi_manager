@@ -262,6 +262,7 @@ TEST_CASE("Internal: Robustness Comprehensive", "[wifi][internal][robustness]")
 static void concurrent_api_task(void *pvParameters)
 {
     WiFiManager &wm = WiFiManager::get_instance();
+    // Connect and disconnect rapidly
     for (int i = 0; i < 10; i++) {
         wm.connect();
         vTaskDelay(pdMS_TO_TICKS(5));
@@ -278,6 +279,7 @@ TEST_CASE("Internal: Concurrent API", "[wifi][internal][concurrency]")
     wm.init();
     wm.start(5000);
 
+    // Two tasks concurrently calling connect and disconnect
     xTaskCreate(concurrent_api_task, "task1", 4096, NULL, 5, NULL);
     xTaskCreate(concurrent_api_task, "task2", 4096, NULL, 5, NULL);
 
@@ -382,29 +384,60 @@ TEST_CASE("Internal: Event Strictness Comprehensive", "[wifi][internal][strict]"
     wm.deinit();
 }
 
-TEST_CASE("Internal: RSSI Quality Logs", "[wifi][internal][quality]")
+TEST_CASE("Internal: RSSI Quality", "[wifi][internal][quality]")
 {
+    int delay_ms    = 10;
     WiFiManager &wm = WiFiManager::get_instance();
     wm.init();
     wm.start(5000);
     WiFiManagerTestAccessor accessor(wm);
 
+    // Generic failure dont should change state, only out the reconection timer in backoff
+    printf("Testing Generic failure in GOOD signal...\n");
     wm.set_credentials("QualityTest", "pass");
-    printf("Simulating CRITICAL signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -95);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Testing beyond the limit to ensure state WAITING_RECONNECT dont change
+    for (int i = 0; i < WiFiStateMachine::RETRY_LIMIT_WEAK + 1; i++) {
+        accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, WiFiStateMachine::RSSI_THRESHOLD_GOOD);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+        TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state()); // should stay on WAIT
+    }
 
-    printf("Simulating WEAK signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -75);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Lambda funcion to credential failure tests
+    auto test_credential_failure = [&](const char *signal_level, uint32_t retry_limit, int8_t rssi_threshold) {
+        printf("Testing Credential failure in %s signal...\n", signal_level);
+        wm.set_credentials("QualityTest", "pass");
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
 
-    printf("Simulating MEDIUM signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -60);
-    vTaskDelay(pdMS_TO_TICKS(100));
+        for (uint32_t i = 0; i < retry_limit; i++) {
+            accessor.test_simulate_disconnect(WIFI_REASON_AUTH_FAIL, rssi_threshold);
+            vTaskDelay(pdMS_TO_TICKS(delay_ms));
 
-    printf("Simulating GOOD signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -50);
-    vTaskDelay(pdMS_TO_TICKS(100));
+            if (i < (retry_limit - 1)) {
+                TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state());
+            }
+            else {
+                TEST_ASSERT_EQUAL(WiFiManager::State::ERROR_CREDENTIALS, wm.get_state());
+            }
+        }
+    };
+
+    // In GOOD signal, RETRY_LIMIT_GOOD = 1 strike is enough to transition to ERROR_CREDENTIALS
+    test_credential_failure("GOOD", WiFiStateMachine::RETRY_LIMIT_GOOD, WiFiStateMachine::RSSI_THRESHOLD_GOOD);
+
+    // In MEDIUM signal, RETRY_LIMIT_MEDIUM = 2 strikes are required to transition to ERROR_CREDENTIALS
+    test_credential_failure("MEDIUM", WiFiStateMachine::RETRY_LIMIT_MEDIUM, WiFiStateMachine::RSSI_THRESHOLD_MEDIUM);
+
+    // In WEAK signal, RETRY_LIMIT_WEAK = 5 strikes are required to transition to ERROR_CREDENTIALS
+    test_credential_failure("WEAK", WiFiStateMachine::RETRY_LIMIT_WEAK, WiFiStateMachine::RSSI_THRESHOLD_WEAK);
+
+    // In critical signal, never transition to ERROR_CREDENTIALS to avoid false positive
+    printf("Testing Credential failure in CRITICAL signal...\n");
+    wm.set_credentials("QualityTest", "pass");
+    for (int i = 0; i < WiFiStateMachine::RETRY_LIMIT_WEAK + 1; i++) {
+        accessor.test_simulate_disconnect(WIFI_REASON_AUTH_FAIL, WiFiStateMachine::RSSI_THRESHOLD_WEAK - 5);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+        TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state()); // should stay on WAIT
+    }
 
     wm.deinit();
 }
@@ -421,6 +454,7 @@ TEST_CASE("Internal: Backoff Graceful Shutdown", "[wifi][internal][lifecycle]")
     vTaskDelay(pdMS_TO_TICKS(100));
     TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state());
 
+    // While running, like WAITING_RECONNECT, deinit should shutdown and set state to UNINITIALIZED
     TEST_ASSERT_EQUAL(ESP_OK, wm.deinit());
     TEST_ASSERT_EQUAL(WiFiManager::State::UNINITIALIZED, wm.get_state());
 }

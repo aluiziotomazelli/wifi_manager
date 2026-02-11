@@ -3,19 +3,20 @@
 
 #include "esp_timer.h"
 #include "esp_wifi.h"
+#include "nvs_flash.h"
 #include "unity.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "nvs_flash.h"
 
 // Include the shared accessor
 #include "esp_log.h"
+#include "host_test_common.hpp"
 #include "test_wifi_manager_accessor.hpp"
 #include "wifi_manager.hpp"
-#include "host_test_common.hpp"
 
 // Wi-Fi stubs with auto event simulation for integration tests
-esp_err_t integration_esp_wifi_start(int cmock_num_calls) {
+esp_err_t integration_esp_wifi_start(int cmock_num_calls)
+{
     if (g_host_test_auto_simulate_events) {
         WiFiManager &wm = WiFiManager::get_instance();
         WiFiManagerTestAccessor accessor(wm);
@@ -24,7 +25,8 @@ esp_err_t integration_esp_wifi_start(int cmock_num_calls) {
     return ESP_OK;
 }
 
-esp_err_t integration_esp_wifi_stop(int cmock_num_calls) {
+esp_err_t integration_esp_wifi_stop(int cmock_num_calls)
+{
     if (g_host_test_auto_simulate_events) {
         WiFiManager &wm = WiFiManager::get_instance();
         WiFiManagerTestAccessor accessor(wm);
@@ -33,7 +35,8 @@ esp_err_t integration_esp_wifi_stop(int cmock_num_calls) {
     return ESP_OK;
 }
 
-esp_err_t integration_esp_wifi_connect(int cmock_num_calls) {
+esp_err_t integration_esp_wifi_connect(int cmock_num_calls)
+{
     if (g_host_test_auto_simulate_events) {
         WiFiManager &wm = WiFiManager::get_instance();
         WiFiManagerTestAccessor accessor(wm);
@@ -467,27 +470,51 @@ TEST_CASE("Internal: RSSI Quality Logs", "[wifi][internal][quality]")
     nvs_flash_erase();
     nvs_flash_init();
 
+    int delay_ms    = 10;
     WiFiManager &wm = WiFiManager::get_instance();
     wm.init();
     wm.start(5000);
     WiFiManagerTestAccessor accessor(wm);
 
+    // Generic failure dont should change state, only out the reconection timer in backoff
+    printf("Testing Generic failure in GOOD signal...\n");
     wm.set_credentials("QualityTest", "pass");
-    printf("Simulating CRITICAL signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -95);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    // Testing beyond the limit to ensure state WAITING_RECONNECT dont change
+    for (int i = 0; i < WiFiStateMachine::RETRY_LIMIT_WEAK + 1; i++) {
+        accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, WiFiStateMachine::RSSI_THRESHOLD_GOOD);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+        TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state()); // should stay on WAIT
+    }
 
-    printf("Simulating WEAK signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -75);
-    vTaskDelay(pdMS_TO_TICKS(100));
+    auto test_credential_failure = [&](const char *signal_level, uint32_t retry_limit, int8_t rssi_threshold) {
+        printf("Testing Credential failure in %s signal...\n", signal_level);
+        wm.set_credentials("QualityTest", "pass");
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
 
-    printf("Simulating MEDIUM signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -60);
-    vTaskDelay(pdMS_TO_TICKS(100));
+        for (uint32_t i = 0; i < retry_limit; i++) {
+            accessor.test_simulate_disconnect(WIFI_REASON_AUTH_FAIL, rssi_threshold);
+            vTaskDelay(pdMS_TO_TICKS(delay_ms));
 
-    printf("Simulating GOOD signal logs...\n");
-    accessor.test_simulate_disconnect(WIFI_REASON_BEACON_TIMEOUT, -50);
-    vTaskDelay(pdMS_TO_TICKS(100));
+            if (i < (retry_limit - 1)) {
+                TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state());
+            }
+            else {
+                TEST_ASSERT_EQUAL(WiFiManager::State::ERROR_CREDENTIALS, wm.get_state());
+            }
+        }
+    };
+
+    test_credential_failure("GOOD", WiFiStateMachine::RETRY_LIMIT_GOOD, WiFiStateMachine::RSSI_THRESHOLD_GOOD);
+    test_credential_failure("MEDIUM", WiFiStateMachine::RETRY_LIMIT_MEDIUM, WiFiStateMachine::RSSI_THRESHOLD_MEDIUM);
+    test_credential_failure("WEAK", WiFiStateMachine::RETRY_LIMIT_WEAK, WiFiStateMachine::RSSI_THRESHOLD_WEAK);
+
+    printf("Testing Credential failure in CRITICAL signal...\n");
+    wm.set_credentials("QualityTest", "pass");
+    for (int i = 0; i < WiFiStateMachine::RETRY_LIMIT_WEAK + 1; i++) {
+        accessor.test_simulate_disconnect(WIFI_REASON_AUTH_FAIL, WiFiStateMachine::RSSI_THRESHOLD_WEAK - 5);
+        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+        TEST_ASSERT_EQUAL(WiFiManager::State::WAITING_RECONNECT, wm.get_state()); // should stay on WAIT
+    }
 
     wm.deinit();
     nvs_flash_deinit();

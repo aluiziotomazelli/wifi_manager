@@ -705,7 +705,7 @@ void WiFiManager::handle_event(const Message &msg, State state)
     switch (msg.event) {
     case EventId::STA_DISCONNECTED:
     {
-        const char *quality = (msg.rssi >= WiFiStateMachine::RSSI_THRESHOLD_GOOD)   ? "GOOD"
+        const char *quality = (msg.rssi >= WiFiStateMachine::RSSI_THRESHOLD_GOOD)     ? "GOOD"
                               : (msg.rssi >= WiFiStateMachine::RSSI_THRESHOLD_MEDIUM) ? "MEDIUM"
                               : (msg.rssi >= WiFiStateMachine::RSSI_THRESHOLD_WEAK)   ? "WEAK"
                                                                                       : "CRITICAL";
@@ -731,12 +731,12 @@ void WiFiManager::handle_event(const Message &msg, State state)
 
         // Case D: Suspect failure (potential wrong password or bad signal)
         // These reasons can be caused by both wrong credentials and poor signal/interference.
+        // We handle this in a dynamic way based on RSSI, passing rssi to handle_suspect_failure()
         if (msg.reason == WIFI_REASON_AUTH_FAIL || msg.reason == WIFI_REASON_802_1X_AUTH_FAILED ||
             msg.reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT || msg.reason == WIFI_REASON_HANDSHAKE_TIMEOUT ||
             msg.reason == WIFI_REASON_CONNECTION_FAIL) {
-
             if (state_machine.handle_suspect_failure(msg.rssi)) {
-                ESP_LOGE(TAG, "Authentication failed or too many suspect failures (Reason: %d). Invalidating.",
+                ESP_LOGE(TAG, "Authentication failed due to too many suspect failures (Reason: %d). Invalidating.",
                          msg.reason);
                 this->storage.save_valid_flag(false);
                 // State machine already transited to ERROR_CREDENTIALS in handle_suspect_failure
@@ -744,8 +744,9 @@ void WiFiManager::handle_event(const Message &msg, State state)
             else {
                 uint32_t delay_ms;
                 state_machine.calculate_next_backoff(delay_ms);
-                ESP_LOGW(TAG, "Suspect failure (Reason: %d), retrying due to poor signal or allowed attempts...",
-                         msg.reason);
+                ESP_LOGW(TAG,
+                         "Suspect failure (Reason: %d), retrying in %lu ms due to poor signal or allowed attempts...",
+                         msg.reason, (unsigned long)delay_ms);
                 // State machine already transited to WAITING_RECONNECT in calculate_next_backoff
             }
             sync_manager.set_bits(wifi_manager::CONNECT_FAILED_BIT);
