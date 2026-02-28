@@ -6,12 +6,14 @@
 #include "wifi_driver_hal.hpp"
 #include <cstring>
 
+namespace wifi_manager {
+
 static const char *TAG = "WiFiConfigStorage";
 
-WiFiConfigStorage::WiFiConfigStorage(WiFiDriverHAL &hal, const char *nvs_namespace)
-    : m_hal(hal)
-    , m_nvs_namespace(nvs_namespace)
-    , m_is_valid(false)
+WiFiConfigStorage::WiFiConfigStorage(IWiFiDriverHAL &hal, const char *nvs_namespace)
+    : hal_(hal)
+    , nvs_namespace_(nvs_namespace)
+    , is_valid_(false)
 {
 }
 
@@ -36,19 +38,19 @@ esp_err_t WiFiConfigStorage::init()
 esp_err_t WiFiConfigStorage::save_credentials(const std::string &ssid, const std::string &password)
 {
     wifi_config_t wifi_config = {};
-    size_t ssid_len           = ssid.length() > 32 ? 32 : ssid.length();
+    size_t ssid_len = ssid.length() > 32 ? 32 : ssid.length();
     memcpy(wifi_config.sta.ssid, ssid.c_str(), ssid_len);
 
     size_t pass_len = password.length() > 64 ? 64 : password.length();
     memcpy(wifi_config.sta.password, password.c_str(), pass_len);
 
-    wifi_config.sta.scan_method        = WIFI_ALL_CHANNEL_SCAN;
-    wifi_config.sta.failure_retry_cnt  = 0;
-    wifi_config.sta.pmf_cfg.capable    = true;
-    wifi_config.sta.pmf_cfg.required   = false;
+    wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+    wifi_config.sta.failure_retry_cnt = 0;
+    wifi_config.sta.pmf_cfg.capable = true;
+    wifi_config.sta.pmf_cfg.required = false;
     wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-    esp_err_t err = m_hal.set_config(&wifi_config);
+    esp_err_t err = hal_.set_config(&wifi_config);
     if (err == ESP_OK) {
         return save_valid_flag(true);
     }
@@ -58,7 +60,7 @@ esp_err_t WiFiConfigStorage::save_credentials(const std::string &ssid, const std
 esp_err_t WiFiConfigStorage::load_credentials(std::string &ssid, std::string &password)
 {
     wifi_config_t conf;
-    esp_err_t err = m_hal.get_config(&conf);
+    esp_err_t err = hal_.get_config(&conf);
     if (err == ESP_OK) {
         char ssid_buf[33] = {0};
         memcpy(ssid_buf, conf.sta.ssid, 32);
@@ -74,14 +76,14 @@ esp_err_t WiFiConfigStorage::load_credentials(std::string &ssid, std::string &pa
 esp_err_t WiFiConfigStorage::clear_credentials()
 {
     wifi_config_t saved_config;
-    esp_err_t err = m_hal.get_config(&saved_config);
+    esp_err_t err = hal_.get_config(&saved_config);
     if (err != ESP_OK) {
         saved_config = {};
     }
-    saved_config.sta.ssid[0]     = 0;
+    saved_config.sta.ssid[0] = 0;
     saved_config.sta.password[0] = 0;
 
-    err = m_hal.set_config(&saved_config);
+    err = hal_.set_config(&saved_config);
     if (err == ESP_OK) {
         return save_valid_flag(false);
     }
@@ -90,28 +92,28 @@ esp_err_t WiFiConfigStorage::clear_credentials()
 
 esp_err_t WiFiConfigStorage::factory_reset()
 {
-    m_hal.restore();
+    hal_.restore();
 
     nvs_handle_t h;
-    if (nvs_open(m_nvs_namespace, NVS_READWRITE, &h) == ESP_OK) {
+    if (nvs_open(nvs_namespace_, NVS_READWRITE, &h) == ESP_OK) {
         nvs_erase_all(h);
         nvs_commit(h);
         nvs_close(h);
     }
 
-    m_is_valid = false;
+    is_valid_ = false;
     return ESP_OK;
 }
 
 bool WiFiConfigStorage::is_valid() const
 {
-    return m_is_valid;
+    return is_valid_;
 }
 
 esp_err_t WiFiConfigStorage::save_valid_flag(bool valid)
 {
     nvs_handle_t h;
-    esp_err_t err = nvs_open(m_nvs_namespace, NVS_READWRITE, &h);
+    esp_err_t err = nvs_open(nvs_namespace_, NVS_READWRITE, &h);
     if (err != ESP_OK) {
         return err;
     }
@@ -123,7 +125,7 @@ esp_err_t WiFiConfigStorage::save_valid_flag(bool valid)
     nvs_close(h);
 
     if (err == ESP_OK) {
-        m_is_valid = valid;
+        is_valid_ = valid;
     }
 
     return err;
@@ -132,16 +134,16 @@ esp_err_t WiFiConfigStorage::save_valid_flag(bool valid)
 esp_err_t WiFiConfigStorage::load_valid_flag()
 {
     nvs_handle_t h;
-    esp_err_t err = nvs_open(m_nvs_namespace, NVS_READONLY, &h);
+    esp_err_t err = nvs_open(nvs_namespace_, NVS_READONLY, &h);
     if (err == ESP_OK) {
         uint8_t valid = 0;
         if (nvs_get_u8(h, "valid", &valid) == ESP_OK) {
-            m_is_valid = (valid != 0);
+            is_valid_ = (valid != 0);
         }
         nvs_close(h);
     }
     else if (err == ESP_ERR_NVS_NOT_FOUND) {
-        m_is_valid = false;
+        is_valid_ = false;
         return ESP_OK;
     }
     return err;
@@ -150,7 +152,7 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
 esp_err_t WiFiConfigStorage::ensure_config_fallback()
 {
     wifi_config_t current_conf;
-    esp_err_t err = m_hal.get_config(&current_conf);
+    esp_err_t err = hal_.get_config(&current_conf);
     if (err != ESP_OK) {
         return err;
     }
@@ -159,7 +161,7 @@ esp_err_t WiFiConfigStorage::ensure_config_fallback()
         if (strlen(CONFIG_WIFI_SSID) > 0) {
             ESP_LOGI(TAG, "No SSID in driver, using Kconfig default: %s", CONFIG_WIFI_SSID);
             wifi_config_t wifi_config = {};
-            size_t ssid_len           = strlen(CONFIG_WIFI_SSID);
+            size_t ssid_len = strlen(CONFIG_WIFI_SSID);
             if (ssid_len > 32)
                 ssid_len = 32;
             memcpy(wifi_config.sta.ssid, CONFIG_WIFI_SSID, ssid_len);
@@ -169,13 +171,13 @@ esp_err_t WiFiConfigStorage::ensure_config_fallback()
                 pass_len = 64;
             memcpy(wifi_config.sta.password, CONFIG_WIFI_PASSWORD, pass_len);
 
-            wifi_config.sta.scan_method        = WIFI_ALL_CHANNEL_SCAN;
-            wifi_config.sta.failure_retry_cnt  = 0;
-            wifi_config.sta.pmf_cfg.capable    = true;
-            wifi_config.sta.pmf_cfg.required   = false;
+            wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+            wifi_config.sta.failure_retry_cnt = 0;
+            wifi_config.sta.pmf_cfg.capable = true;
+            wifi_config.sta.pmf_cfg.required = false;
             wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-            err = m_hal.set_config(&wifi_config);
+            err = hal_.set_config(&wifi_config);
             if (err == ESP_OK) {
                 return save_valid_flag(true);
             }
@@ -184,9 +186,11 @@ esp_err_t WiFiConfigStorage::ensure_config_fallback()
     }
     else {
         // If driver has SSID but flag wasn't set, respect driver
-        if (!m_is_valid) {
+        if (!is_valid_) {
             return save_valid_flag(true);
         }
     }
     return ESP_OK;
 }
+
+} // namespace wifi_manager

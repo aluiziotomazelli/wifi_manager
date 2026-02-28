@@ -2,15 +2,7 @@
 #include "esp_timer.h"
 #include <algorithm>
 
-// Re-defining bits here or mapping them? Let's use the same values for consistency.
-static constexpr EventBits_t STARTED_BIT        = (1 << 0);
-static constexpr EventBits_t STOPPED_BIT        = (1 << 1);
-static constexpr EventBits_t CONNECTED_BIT      = (1 << 2);
-static constexpr EventBits_t DISCONNECTED_BIT   = (1 << 3);
-static constexpr EventBits_t CONNECT_FAILED_BIT = (1 << 4);
-static constexpr EventBits_t START_FAILED_BIT   = (1 << 5);
-static constexpr EventBits_t STOP_FAILED_BIT    = (1 << 6);
-static constexpr EventBits_t INVALID_STATE_BIT  = (1 << 7);
+namespace wifi_manager {
 
 const WiFiStateMachine::StateProps WiFiStateMachine::s_state_props[(int)State::COUNT] = {
     /* UNINITIALIZED     */ {.is_active = false, .is_connected = false, .is_sta_ready = false},
@@ -131,10 +123,10 @@ const WiFiStateMachine::EventOutcome WiFiStateMachine::s_transition_matrix[(int)
 };
 
 WiFiStateMachine::WiFiStateMachine()
-    : m_current_state(State::UNINITIALIZED)
-    , m_retry_count(0)
-    , m_suspect_retry_count(0)
-    , m_next_reconnect_ms(0)
+    : current_state_(State::UNINITIALIZED)
+    , retry_count_(0)
+    , suspect_retry_count_(0)
+    , next_reconnect_ms_(0)
 {
 }
 
@@ -142,36 +134,33 @@ WiFiStateMachine::Action WiFiStateMachine::validate_command(CommandId cmd) const
 {
     if ((int)cmd >= (int)CommandId::COUNT)
         return Action::EXECUTE;
-    return s_command_matrix[(int)m_current_state][(int)cmd];
+    return s_command_matrix[(int)current_state_][(int)cmd];
 }
 
 WiFiStateMachine::EventOutcome WiFiStateMachine::resolve_event(EventId event) const
 {
     if ((int)event >= (int)EventId::COUNT)
-        return {m_current_state, 0};
-    return s_transition_matrix[(int)m_current_state][(int)event];
+        return {current_state_, 0};
+    return s_transition_matrix[(int)current_state_][(int)event];
 }
 
 void WiFiStateMachine::transition_to(State next_state)
 {
-    m_current_state = next_state;
+    current_state_ = next_state;
 }
 
 void WiFiStateMachine::reset_retries()
 {
-    m_retry_count         = 0;
-    m_suspect_retry_count = 0;
+    retry_count_ = 0;
+    suspect_retry_count_ = 0;
 }
 
 bool WiFiStateMachine::handle_suspect_failure(int8_t rssi)
 {
-    m_suspect_retry_count++;
+    suspect_retry_count_++;
 
     uint32_t limit = 0;
 
-    // Dynamic retry limit based on signal quality (RSSI)
-    // Better signal -> fewer attempts before assuming wrong credentials
-    // Critical signal -> infinite attempts (avoid false positive credential errors)
     if (rssi >= RSSI_THRESHOLD_GOOD) {
         limit = RETRY_LIMIT_GOOD;
     }
@@ -182,12 +171,11 @@ bool WiFiStateMachine::handle_suspect_failure(int8_t rssi)
         limit = RETRY_LIMIT_WEAK;
     }
     else {
-        // Critical signal: never transition to ERROR_CREDENTIALS
         return false;
     }
 
-    if (m_suspect_retry_count >= limit) {
-        m_current_state = State::ERROR_CREDENTIALS;
+    if (suspect_retry_count_ >= limit) {
+        current_state_ = State::ERROR_CREDENTIALS;
         return true;
     }
     return false;
@@ -195,52 +183,48 @@ bool WiFiStateMachine::handle_suspect_failure(int8_t rssi)
 
 void WiFiStateMachine::calculate_next_backoff(uint32_t &delay_ms_out)
 {
-    m_retry_count++;
+    retry_count_++;
 
-    // Limit exponent to avoid overflow
-    uint32_t exponent = (m_retry_count > 0) ? (m_retry_count - 1) : 0;
+    uint32_t exponent = (retry_count_ > 0) ? (retry_count_ - 1) : 0;
     if (exponent > MAX_BACKOFF_EXPONENT)
         exponent = MAX_BACKOFF_EXPONENT;
 
     uint32_t delay_ms = (1UL << exponent) * 1000UL;
     if (delay_ms > MAX_BACKOFF_MS)
-        delay_ms = MAX_BACKOFF_MS; // Cap at MAX_BACKOFF_MS
+        delay_ms = MAX_BACKOFF_MS;
 
-    delay_ms_out        = delay_ms;
-    m_next_reconnect_ms = (esp_timer_get_time() / 1000) + delay_ms;
-    m_current_state     = State::WAITING_RECONNECT;
+    delay_ms_out = delay_ms;
+    next_reconnect_ms_ = (esp_timer_get_time() / 1000) + delay_ms;
+    current_state_ = State::WAITING_RECONNECT;
 }
 
 bool WiFiStateMachine::is_sta_ready() const
 {
-    return s_state_props[(int)m_current_state].is_sta_ready;
+    return s_state_props[(int)current_state_].is_sta_ready;
 }
 
 bool WiFiStateMachine::is_active() const
 {
-    return s_state_props[(int)m_current_state].is_active;
+    return s_state_props[(int)current_state_].is_active;
 }
 
 TickType_t WiFiStateMachine::get_wait_ticks() const
 {
-    // Only calculate wait time if we're in the WAITING_RECONNECT state
-    if (m_current_state != State::WAITING_RECONNECT) {
+    if (current_state_ != State::WAITING_RECONNECT) {
         return portMAX_DELAY;
     }
 
-    // Get current time in milliseconds
     uint64_t now_ms = esp_timer_get_time() / 1000;
 
-    // If the reconnect time hasn't arrived yet, calculate how long to wait
-    if (m_next_reconnect_ms > now_ms) {
-        uint64_t wait_ms = m_next_reconnect_ms - now_ms;
-        // Sanity check: avoid converting unreasonably large values
+    if (next_reconnect_ms_ > now_ms) {
+        uint64_t wait_ms = next_reconnect_ms_ - now_ms;
         if (wait_ms > UINT32_MAX / portTICK_PERIOD_MS) {
             return portMAX_DELAY;
         }
         return pdMS_TO_TICKS(wait_ms);
     }
 
-    // Reconnect time has passed, don't wait
     return 0;
 }
+
+} // namespace wifi_manager
