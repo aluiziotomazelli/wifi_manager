@@ -10,7 +10,7 @@ set(EXTRA_COMPONENT_DIRS
 )
 
 # Restrict components to what is strictly necessary
-set(COMPONENTS main wifi_manager nvs_flash esp_event esp_netif esp_wifi lwip unity log esp_common esp_system esp_rom soc hal esp_hw_support heap freertos linux esp_partition spi_flash esp_timer)
+set(COMPONENTS main wifi_manager)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
