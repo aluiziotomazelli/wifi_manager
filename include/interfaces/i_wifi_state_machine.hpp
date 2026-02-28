@@ -1,8 +1,6 @@
 #pragma once
 
-#include "esp_err.h"
 #include <cstdint>
-#include "freertos/FreeRTOS.h"
 
 #include "wifi_types.hpp"
 
@@ -61,7 +59,7 @@ public:
     virtual uint32_t get_retry_count() const = 0;
     virtual uint64_t get_next_reconnect_ms() const = 0;
 
-    virtual TickType_t get_wait_ticks() const = 0;
+    virtual uint32_t get_wait_ms() const = 0;
     virtual bool is_sta_ready() const = 0;
     virtual bool is_active() const = 0;
 };

@@ -2,10 +2,9 @@
 
 #include "esp_err.h"
 #include <cstdint>
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
 
 #include "wifi_types.hpp"
+#include "interfaces/i_timer_hal.hpp"
 
 #include "interfaces/i_wifi_state_machine.hpp"
 
@@ -18,7 +17,7 @@ namespace wifi_manager {
 class WiFiStateMachine : public IWiFiStateMachine
 {
 public:
-    WiFiStateMachine();
+    explicit WiFiStateMachine(ITimerHAL &timer_hal);
     ~WiFiStateMachine() override = default;
 
     /**
@@ -69,9 +68,9 @@ public:
     }
 
     /**
-     * @brief Calculate the wait time in FreeRTOS ticks for the task loop.
+     * @brief Calculate the wait time in milliseconds for the task loop.
      */
-    TickType_t get_wait_ticks() const override;
+    uint32_t get_wait_ms() const override;
     bool is_sta_ready() const override;
     bool is_active() const override;
 
@@ -84,10 +83,11 @@ public:
     static constexpr uint32_t RETRY_LIMIT_MEDIUM = 2;
     static constexpr uint32_t RETRY_LIMIT_WEAK = 5;
 
-    static constexpr uint32_t MAX_BACKOFF_EXPONENT = 8;
+    static constexpr uint32_t MAX_BACKOFF_EXPONENT = 9;
     static constexpr uint32_t MAX_BACKOFF_MS = 300000UL; // 5 minutes
 
 private:
+    ITimerHAL &timer_hal_;
     State current_state_;
     uint32_t retry_count_;
     uint32_t suspect_retry_count_;

@@ -1,5 +1,4 @@
 #include "wifi_state_machine.hpp"
-#include "esp_timer.h"
 #include <algorithm>
 
 namespace wifi_manager {
@@ -122,8 +121,9 @@ const WiFiStateMachine::EventOutcome WiFiStateMachine::s_transition_matrix[(int)
      {State::STOPPING, 0}},
 };
 
-WiFiStateMachine::WiFiStateMachine()
-    : current_state_(State::UNINITIALIZED)
+WiFiStateMachine::WiFiStateMachine(ITimerHAL &timer_hal)
+    : timer_hal_(timer_hal)
+    , current_state_(State::UNINITIALIZED)
     , retry_count_(0)
     , suspect_retry_count_(0)
     , next_reconnect_ms_(0)
@@ -133,7 +133,7 @@ WiFiStateMachine::WiFiStateMachine()
 WiFiStateMachine::Action WiFiStateMachine::validate_command(CommandId cmd) const
 {
     if ((int)cmd >= (int)CommandId::COUNT)
-        return Action::EXECUTE;
+        return Action::EXECUTE; // TODO: change to ERROR?
     return s_command_matrix[(int)current_state_][(int)cmd];
 }
 
@@ -185,7 +185,8 @@ void WiFiStateMachine::calculate_next_backoff(uint32_t &delay_ms_out)
 {
     retry_count_++;
 
-    uint32_t exponent = (retry_count_ > 0) ? (retry_count_ - 1) : 0;
+    uint32_t exponent = retry_count_ - 1;
+
     if (exponent > MAX_BACKOFF_EXPONENT)
         exponent = MAX_BACKOFF_EXPONENT;
 
@@ -194,7 +195,7 @@ void WiFiStateMachine::calculate_next_backoff(uint32_t &delay_ms_out)
         delay_ms = MAX_BACKOFF_MS;
 
     delay_ms_out = delay_ms;
-    next_reconnect_ms_ = (esp_timer_get_time() / 1000) + delay_ms;
+    next_reconnect_ms_ = timer_hal_.get_time_ms() + delay_ms;
     current_state_ = State::WAITING_RECONNECT;
 }
 
@@ -208,20 +209,20 @@ bool WiFiStateMachine::is_active() const
     return s_state_props[(int)current_state_].is_active;
 }
 
-TickType_t WiFiStateMachine::get_wait_ticks() const
+uint32_t WiFiStateMachine::get_wait_ms() const
 {
     if (current_state_ != State::WAITING_RECONNECT) {
-        return portMAX_DELAY;
+        return 0xFFFFFFFF; // Equivalent to portMAX_DELAY
     }
 
-    uint64_t now_ms = esp_timer_get_time() / 1000;
+    uint64_t now_ms = timer_hal_.get_time_ms();
 
     if (next_reconnect_ms_ > now_ms) {
         uint64_t wait_ms = next_reconnect_ms_ - now_ms;
-        if (wait_ms > UINT32_MAX / portTICK_PERIOD_MS) {
-            return portMAX_DELAY;
+        if (wait_ms > 0xFFFFFFFF) {
+            return 0xFFFFFFFF;
         }
-        return pdMS_TO_TICKS(wait_ms);
+        return (uint32_t)wait_ms;
     }
 
     return 0;
