@@ -36,6 +36,7 @@ Thumbs.db
 #tests
 **/__pycache__/
 *.pyc
+**/coverage/**
 
 #other
 STUDY.md
