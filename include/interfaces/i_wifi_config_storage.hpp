@@ -3,31 +3,22 @@
 #include "esp_err.h"
 #include <string>
 
-#include "interfaces/i_wifi_config_storage.hpp"
-
 namespace wifi_manager {
 
-class IWiFiDriverHAL;
-
 /**
- * @class WiFiConfigStorage
- * @brief Handles persistence of WiFi credentials and validity flags using NVS.
+ * @class IWiFiConfigStorage
+ * @brief Interface for handling persistence of WiFi credentials and validity flags.
  */
-class WiFiConfigStorage : public IWiFiConfigStorage
+class IWiFiConfigStorage
 {
 public:
-    /**
-     * @brief Constructor.
-     * @param hal Reference to the driver HAL interface.
-     * @param nvs_namespace NVS namespace to use for storage.
-     */
-    explicit WiFiConfigStorage(IWiFiDriverHAL &hal, const char *nvs_namespace = "wifi_manager");
+    virtual ~IWiFiConfigStorage() = default;
 
     /**
      * @brief Initialize NVS if not already initialized.
      * @return ESP_OK on success.
      */
-    esp_err_t init() override;
+    virtual esp_err_t init() = 0;
 
     /**
      * @brief Save WiFi credentials to the driver and persist validity flag.
@@ -35,7 +26,7 @@ public:
      * @param password WiFi password.
      * @return ESP_OK on success.
      */
-    esp_err_t save_credentials(const std::string &ssid, const std::string &password) override;
+    virtual esp_err_t save_credentials(const std::string &ssid, const std::string &password) = 0;
 
     /**
      * @brief Load WiFi credentials from the driver.
@@ -43,45 +34,38 @@ public:
      * @param password [out] Loaded password.
      * @return ESP_OK on success.
      */
-    esp_err_t load_credentials(std::string &ssid, std::string &password) override;
+    virtual esp_err_t load_credentials(std::string &ssid, std::string &password) = 0;
 
     /**
      * @brief Clear WiFi credentials from the driver and reset validity flag.
      * @return ESP_OK on success.
      */
-    esp_err_t clear_credentials() override;
+    virtual esp_err_t clear_credentials() = 0;
 
     /**
      * @brief Reset all WiFi settings to factory defaults.
      * @return ESP_OK on success.
      */
-    esp_err_t factory_reset() override;
+    virtual esp_err_t factory_reset() = 0;
 
     /**
      * @brief Check if the stored credentials are considered valid.
      * @return true if valid.
      */
-    bool is_valid() const override;
+    virtual bool is_valid() const = 0;
 
     /**
      * @brief Save the validity flag to storage.
      * @param valid Validity status.
      * @return ESP_OK on success.
      */
-    esp_err_t save_valid_flag(bool valid) override;
+    virtual esp_err_t save_valid_flag(bool valid) = 0;
 
     /**
      * @brief Ensure driver has a configuration, fallback to Kconfig if empty.
      * @return ESP_OK on success.
      */
-    esp_err_t ensure_config_fallback() override;
-
-private:
-    IWiFiDriverHAL &hal_;
-    const char *nvs_namespace_;
-    bool is_valid_;
-
-    esp_err_t load_valid_flag();
+    virtual esp_err_t ensure_config_fallback() = 0;
 };
 
 } // namespace wifi_manager
