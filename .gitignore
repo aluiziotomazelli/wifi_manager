@@ -36,3 +36,7 @@ Thumbs.db
 #tests
 **/__pycache__/
 *.pyc
+
+#other
+STUDY.md
+snapshot.md
