@@ -12,6 +12,7 @@
 #include "wifi_manager.hpp"
 
 // Concrete implementations for the factory
+#include "esp_timer_hal.hpp"
 #include "wifi_config_storage.hpp"
 #include "wifi_driver_hal.hpp"
 #include "wifi_state_machine.hpp"
@@ -30,7 +31,8 @@ WiFiManager &WiFiManager::get_instance()
     static auto driver_hal = std::make_unique<WiFiDriverHAL>();
     static auto storage = std::make_unique<WiFiConfigStorage>(*driver_hal, "wifi_manager");
     static auto sync_manager = std::make_unique<WiFiSyncManager>();
-    static auto state_machine = std::make_unique<WiFiStateMachine>();
+    static auto timer_hal = std::make_unique<EspTimerHAL>();
+    static auto state_machine = std::make_unique<WiFiStateMachine>(*timer_hal);
 
     static WiFiManager instance(
         std::move(driver_hal), std::move(storage), std::move(sync_manager), std::move(state_machine));
@@ -625,7 +627,8 @@ void WiFiManager::wifi_task(void *pvParameters)
     WiFiManager *self = static_cast<WiFiManager *>(pvParameters);
     Message msg;
     while (true) {
-        TickType_t wait_ticks = self->state_machine_->get_wait_ticks();
+        uint32_t wait_ms = self->state_machine_->get_wait_ms();
+        TickType_t wait_ticks = (wait_ms == 0xFFFFFFFF) ? portMAX_DELAY : pdMS_TO_TICKS(wait_ms);
         if (xQueueReceive(self->sync_manager_->get_queue(), &msg, wait_ticks) == pdTRUE) {
             xSemaphoreTakeRecursive(self->state_mutex_, portMAX_DELAY);
             if (msg.type == MessageType::COMMAND && msg.cmd == CommandId::EXIT) {
