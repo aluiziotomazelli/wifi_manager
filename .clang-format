@@ -1,0 +1,103 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# ============================================================================
+# INDENTATION AND SPACING
+# ============================================================================
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+NamespaceIndentation: None
+AccessModifierOffset: -4
+ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 4
+
+# ============================================================================
+# FUNCTION AND ARGUMENT LAYOUT
+# ============================================================================
+ColumnLimit: 120
+# Forces a break after '(' if arguments don't fit on a single line
+AlignAfterOpenBracket: AlwaysBreak
+# Prevents multiple parameters from being packed on the same line after a break
+BinPackParameters: false
+BinPackArguments: false
+# Allows empty functions (like virtual destructors) to stay on one line
+AllowShortFunctionsOnASingleLine: Empty
+
+# ============================================================================
+# POINTERS AND REFERENCES
+# ============================================================================
+# Keeps the pointer to the right: void *payload
+PointerAlignment: Right
+DerivePointerAlignment: false
+
+# ============================================================================
+# ALIGNMENT SETTINGS
+# ============================================================================
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: Left
+AlignOperands: true
+AlignTrailingComments: true
+
+# ============================================================================
+# LINE BREAKS AND CONTROL
+# ============================================================================
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakAfterReturnType: None
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma
+BreakStringLiterals: true
+
+# ============================================================================
+# BRACE WRAPPING
+# ============================================================================
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: false
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: false
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+
+# ============================================================================
+# INCLUDE SORTING
+# ============================================================================
+SortIncludes: true
+IncludeCategories:
+  - Regex: '^<openthread/.*/'
+    Priority: 4
+  - Regex: '^<openthread/'
+    Priority: 3
+  - Regex: '^<'
+    Priority: 2
+  - Regex: '^".*/'
+    Priority: 5
+  - Regex: '^"'
+    Priority: 1
+
+# ============================================================================
+# MISCELLANEOUS
+# ============================================================================
+Standard: Cpp11
+ReflowComments: true
+
+# ============================================================================
+# EMPTY LINES
+# ============================================================================
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
