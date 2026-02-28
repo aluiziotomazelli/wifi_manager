@@ -11,6 +11,8 @@
 #include "test_wifi_manager_accessor.hpp"
 #include "wifi_manager.hpp"
 
+using namespace wifi_manager;
+
 // No longer using #ifdef UNIT_TEST as this is a standalone test app
 
 TEST_CASE("LOG on", "[wifi][log]")
@@ -386,7 +388,7 @@ TEST_CASE("Internal: Event Strictness Comprehensive", "[wifi][internal][strict]"
 
 TEST_CASE("Internal: RSSI Quality", "[wifi][internal][quality]")
 {
-    int delay_ms    = 10;
+    int delay_ms = 10;
     WiFiManager &wm = WiFiManager::get_instance();
     wm.init();
     wm.start(5000);

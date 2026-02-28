@@ -7,6 +7,8 @@
 
 #include "wifi_manager.hpp"
 
+using namespace wifi_manager;
+
 TEST_CASE("LOG on", "[wifi][log]")
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
@@ -23,7 +25,7 @@ TEST_CASE("LOG off", "[wifi][log]")
 
 TEST_CASE("Public: Sync Start/Stop", "[wifi][lifecycle]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
 
@@ -40,7 +42,7 @@ TEST_CASE("Public: Sync Start/Stop", "[wifi][lifecycle]")
 
 TEST_CASE("Public: Async Start/Stop", "[wifi][lifecycle]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
 
@@ -69,7 +71,7 @@ TEST_CASE("Public: Async Start/Stop", "[wifi][lifecycle]")
 
 TEST_CASE("Public: API Abuse (Invalid State)", "[wifi][error]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
 
     TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, wm.start(1000));
@@ -83,7 +85,7 @@ TEST_CASE("Public: API Abuse (Invalid State)", "[wifi][error]")
 
 TEST_CASE("Public: Idempotency (Redundant Calls)", "[wifi][lifecycle]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
 
@@ -102,7 +104,7 @@ TEST_CASE("Public: Idempotency (Redundant Calls)", "[wifi][lifecycle]")
 
 TEST_CASE("Public: Connect/Disconnect Comprehensive", "[wifi][connect][real]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
     wm.start(5000);
@@ -141,7 +143,7 @@ TEST_CASE("Public: Connect/Disconnect Comprehensive", "[wifi][connect][real]")
 
 TEST_CASE("Public: Connect with Wrong Password", "[wifi][connect][real]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
     wm.start(5000);
@@ -161,7 +163,7 @@ TEST_CASE("Public: Connect with Wrong Password", "[wifi][connect][real]")
 
 TEST_CASE("Public: Connect Rollback (Timeout)", "[wifi][connect]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
     wm.start(5000);
@@ -193,7 +195,7 @@ TEST_CASE("Public: Connect Rollback (Timeout)", "[wifi][connect]")
 
 TEST_CASE("Public: Real Automatic Reconnection", "[wifi][reconnect][manual]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
     wm.start(5000);
@@ -208,7 +210,7 @@ TEST_CASE("Public: Real Automatic Reconnection", "[wifi][reconnect][manual]")
     printf("Waiting 20 seconds for disconnection detection...\n");
 
     // Wait for disconnection
-    int seconds       = 0;
+    int seconds = 0;
     bool disconnected = false;
     while (seconds < 30) {
         if (wm.get_state() == WiFiManager::State::WAITING_RECONNECT ||
@@ -234,7 +236,7 @@ TEST_CASE("Public: Real Automatic Reconnection", "[wifi][reconnect][manual]")
     printf("Please TURN ON the Router (SSID: %s) NOW.\n", TEST_WIFI_SSID);
     printf("Waiting 60 seconds for automatic reconnection...\n");
 
-    seconds          = 0;
+    seconds = 0;
     bool reconnected = false;
     while (seconds < 60) {
         if (wm.get_state() == WiFiManager::State::CONNECTED_GOT_IP) {
@@ -255,7 +257,7 @@ TEST_CASE("Public: Real Automatic Reconnection", "[wifi][reconnect][manual]")
 
 TEST_CASE("Public: In-flight Credentials Change", "[wifi][roaming]")
 {
-    WiFiManager &wm = WiFiManager::get_instance();
+    WiFiManager &wm = wifi_manager::WiFiManager::get_instance();
     wm.deinit();
     wm.init();
     wm.start(5000);
