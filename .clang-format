@@ -23,7 +23,7 @@ AlignAfterOpenBracket: AlwaysBreak
 BinPackParameters: false
 BinPackArguments: false
 # Allows empty functions (like virtual destructors) to stay on one line
-AllowShortFunctionsOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Inline
 
 # ============================================================================
 # POINTERS AND REFERENCES
