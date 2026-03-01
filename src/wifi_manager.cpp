@@ -100,29 +100,45 @@ esp_err_t WiFiManager::init()
         return err;
     }
 
-    err = driver_hal_->init_netif();
-    if (err != ESP_OK)
-        return err;
-
-    err = driver_hal_->create_default_event_loop();
-    if (err != ESP_OK) {
+    err = driver_hal_->netif_init();
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Failed to esp_netif_init: %s", esp_err_to_name(err));
         deinit();
         return err;
     }
+    if (err == ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "Netif already initialized.");
+    }
 
-    err = driver_hal_->setup_sta_netif();
-    if (err != ESP_OK) {
+    err = driver_hal_->event_loop_create_default();
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Failed to create event loop: %s", esp_err_to_name(err));
         deinit();
         return err;
     }
+    if (err == ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "Event loop already created.");
+    }
 
-    err = driver_hal_->init_wifi();
+    sta_netif_ = driver_hal_->netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (sta_netif_ == nullptr) {
+        sta_netif_ = driver_hal_->netif_create_default_wifi_sta();
+    }
+    if (sta_netif_ == nullptr) {
+        ESP_LOGE(TAG, "Failed to create default WiFi STA netif");
+        deinit();
+        return ESP_ERR_NO_MEM;
+    }
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    err = driver_hal_->wifi_init(&cfg);
     if (err != ESP_OK) {
         deinit();
+        ESP_LOGE(TAG, "Failed to esp_wifi_init: %s", esp_err_to_name(err));
         return err;
     }
 
-    err = driver_hal_->set_mode_sta();
+    err = driver_hal_->wifi_set_mode(WIFI_MODE_STA);
     if (err != ESP_OK) {
         deinit();
         return err;
@@ -137,8 +153,14 @@ esp_err_t WiFiManager::init()
     // Use member or static instance of WiFiEventHandler
     static WiFiEventHandler event_handler(sync_manager_.get());
 
-    err = driver_hal_->register_event_handlers(
-        &WiFiEventHandler::wifi_event_callback, &WiFiEventHandler::ip_event_callback, &event_handler);
+    err = driver_hal_->event_handler_instance_register(
+        WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiEventHandler::wifi_event_callback, &event_handler, &wifi_event_instance_);
+    if (err != ESP_OK) {
+        deinit();
+        return err;
+    }
+    err = driver_hal_->event_handler_instance_register(
+        IP_EVENT, ESP_EVENT_ANY_ID, &WiFiEventHandler::ip_event_callback, &event_handler, &ip_event_instance_);
     if (err != ESP_OK) {
         deinit();
         return err;
@@ -198,9 +220,38 @@ esp_err_t WiFiManager::deinit()
         ESP_LOGI(TAG, "WiFi task terminated.");
     }
 
-    esp_err_t ret = driver_hal_->deinit();
-    (void)ret; // Unused for now
-    driver_hal_->unregister_event_handlers();
+    esp_err_t ret = ESP_OK;
+    esp_err_t err;
+
+    if (wifi_event_instance_ != nullptr) {
+        err = driver_hal_->event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_instance_);
+        wifi_event_instance_ = nullptr;
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to unregister WiFi event handler: %s", esp_err_to_name(err));
+            ret = err;
+        }
+    }
+    if (ip_event_instance_ != nullptr) {
+        err = driver_hal_->event_handler_instance_unregister(IP_EVENT, ESP_EVENT_ANY_ID, ip_event_instance_);
+        ip_event_instance_ = nullptr;
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to unregister IP event handler: %s", esp_err_to_name(err));
+            ret = err;
+        }
+    }
+
+    err = driver_hal_->wifi_deinit();
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to deinitialize WiFi: %s", esp_err_to_name(err));
+        ret = err;
+    }
+
+    err = driver_hal_->netif_destroy_default_wifi(sta_netif_);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to destroy default WiFi netif: %s", esp_err_to_name(err));
+        ret = err;
+    }
+
     sync_manager_->deinit();
 
     xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
@@ -208,7 +259,7 @@ esp_err_t WiFiManager::deinit()
     xSemaphoreGiveRecursive(state_mutex_);
 
     ESP_LOGI(TAG, "WiFi Manager deinitialized.");
-    return ESP_OK;
+    return ret;
 }
 
 esp_err_t WiFiManager::start(uint32_t timeout_ms)

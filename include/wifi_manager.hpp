@@ -100,6 +100,10 @@ private:
     TaskHandle_t task_handle_;              ///< Task handling internal state
     mutable SemaphoreHandle_t state_mutex_; ///< Recursive mutex for thread-safe state access
 
+    esp_event_handler_instance_t wifi_event_instance_ = nullptr; ///< Instance for WiFi event handler
+    esp_event_handler_instance_t ip_event_instance_ = nullptr;   ///< Instance for IP event handler
+    esp_netif_t *sta_netif_ = nullptr;                           ///< Netif handle for STA interface
+
     /**
      * @brief Resolves the next state and sync bits for a given event.
      * @param event The system event received.
