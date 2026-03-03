@@ -16,8 +16,8 @@ set(COMPONENTS main wifi_manager)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project(test_driver_hal)
+project(test_config_storage)
 
 # Include common coverage logic
 include("../coverage_common.cmake")
-setup_gtest_coverage(test_driver_hal test_driver_hal.elf)
+setup_gtest_coverage(test_config_storage test_config_storage.elf)

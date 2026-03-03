@@ -1,12 +1,13 @@
 idf_component_register(
     SRCS
         "main.cpp"
-        "test_driver_hal.cpp"
+        "test_config_storage.cpp"
     INCLUDE_DIRS
         "."
     REQUIRES
         gtest
         wifi_manager
+        nvs_flash
     WHOLE_ARCHIVE
 )
 
