@@ -50,7 +50,7 @@ esp_err_t WiFiConfigStorage::save_credentials(const std::string &ssid, const std
     wifi_config.sta.pmf_cfg.required = false;
     wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-    esp_err_t err = hal_.set_config(&wifi_config);
+    esp_err_t err = hal_.wifi_set_config(&wifi_config);
     if (err == ESP_OK) {
         return save_valid_flag(true);
     }
@@ -60,7 +60,7 @@ esp_err_t WiFiConfigStorage::save_credentials(const std::string &ssid, const std
 esp_err_t WiFiConfigStorage::load_credentials(std::string &ssid, std::string &password)
 {
     wifi_config_t conf;
-    esp_err_t err = hal_.get_config(&conf);
+    esp_err_t err = hal_.wifi_get_config(&conf);
     if (err == ESP_OK) {
         char ssid_buf[33] = {0};
         memcpy(ssid_buf, conf.sta.ssid, 32);
@@ -76,14 +76,14 @@ esp_err_t WiFiConfigStorage::load_credentials(std::string &ssid, std::string &pa
 esp_err_t WiFiConfigStorage::clear_credentials()
 {
     wifi_config_t saved_config;
-    esp_err_t err = hal_.get_config(&saved_config);
+    esp_err_t err = hal_.wifi_get_config(&saved_config);
     if (err != ESP_OK) {
         saved_config = {};
     }
     saved_config.sta.ssid[0] = 0;
     saved_config.sta.password[0] = 0;
 
-    err = hal_.set_config(&saved_config);
+    err = hal_.wifi_set_config(&saved_config);
     if (err == ESP_OK) {
         return save_valid_flag(false);
     }
@@ -92,7 +92,7 @@ esp_err_t WiFiConfigStorage::clear_credentials()
 
 esp_err_t WiFiConfigStorage::factory_reset()
 {
-    hal_.restore();
+    hal_.wifi_restore();
 
     nvs_handle_t h;
     if (nvs_open(nvs_namespace_, NVS_READWRITE, &h) == ESP_OK) {
@@ -141,18 +141,18 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
             is_valid_ = (valid != 0);
         }
         nvs_close(h);
+        return err;
     }
     else if (err == ESP_ERR_NVS_NOT_FOUND) {
         is_valid_ = false;
         return ESP_OK;
     }
-    return err;
 }
 
 esp_err_t WiFiConfigStorage::ensure_config_fallback()
 {
     wifi_config_t current_conf;
-    esp_err_t err = hal_.get_config(&current_conf);
+    esp_err_t err = hal_.wifi_get_config(&current_conf);
     if (err != ESP_OK) {
         return err;
     }
@@ -177,7 +177,7 @@ esp_err_t WiFiConfigStorage::ensure_config_fallback()
             wifi_config.sta.pmf_cfg.required = false;
             wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-            err = hal_.set_config(&wifi_config);
+            err = hal_.wifi_set_config(&wifi_config);
             if (err == ESP_OK) {
                 return save_valid_flag(true);
             }
