@@ -50,7 +50,7 @@ public:
 
     // Cleanup
     virtual esp_err_t wifi_deinit() = 0;
-    virtual esp_err_t netif_destroy_default_wifi(esp_netif_t *netif) = 0;
+    virtual void netif_destroy_default_wifi(esp_netif_t *netif) = 0;
 };
 
 } // namespace wifi_manager

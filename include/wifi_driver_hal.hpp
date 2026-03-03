@@ -18,8 +18,8 @@ namespace wifi_manager {
 class WiFiDriverHAL : public IWiFiDriverHAL
 {
 public:
-    WiFiDriverHAL();
-    ~WiFiDriverHAL() override;
+    WiFiDriverHAL() = default;
+    ~WiFiDriverHAL() override = default;
 
     // System Initialization
 
@@ -69,6 +69,7 @@ public:
 
     // Cleanup
     esp_err_t wifi_deinit() override { return esp_wifi_deinit(); };
+    void netif_destroy_default_wifi(esp_netif_t *netif) override { esp_netif_destroy_default_wifi(netif); };
 };
 
 } // namespace wifi_manager
