@@ -141,11 +141,14 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
             is_valid_ = (valid != 0);
         }
         nvs_close(h);
-        return err;
+        return ESP_OK;
     }
     else if (err == ESP_ERR_NVS_NOT_FOUND) {
         is_valid_ = false;
         return ESP_OK;
+    }
+    else {
+        return err;
     }
 }
 

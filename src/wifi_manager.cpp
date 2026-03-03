@@ -246,11 +246,7 @@ esp_err_t WiFiManager::deinit()
         ret = err;
     }
 
-    err = driver_hal_->netif_destroy_default_wifi(sta_netif_);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to destroy default WiFi netif: %s", esp_err_to_name(err));
-        ret = err;
-    }
+    driver_hal_->netif_destroy_default_wifi(sta_netif_);
 
     sync_manager_->deinit();
 
@@ -469,7 +465,7 @@ esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::strin
     }
 
     if (state_machine_->is_active()) {
-        driver_hal_->disconnect();
+        driver_hal_->wifi_disconnect();
     }
 
     esp_err_t err = storage_->save_credentials(ssid, password);
@@ -479,7 +475,7 @@ esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::strin
         memset(&cfg, 0, sizeof(cfg));
         strncpy((char *)cfg.sta.ssid, ssid.c_str(), sizeof(cfg.sta.ssid));
         strncpy((char *)cfg.sta.password, password.c_str(), sizeof(cfg.sta.password));
-        driver_hal_->set_config(&cfg);
+        driver_hal_->wifi_set_config(&cfg);
     }
 
     xSemaphoreGiveRecursive(state_mutex_);
@@ -572,7 +568,7 @@ void WiFiManager::process_message(const Message &msg, State state)
 void WiFiManager::handle_start(const Message &msg, State state)
 {
     state_machine_->transition_to(State::STARTING);
-    esp_err_t err = driver_hal_->start();
+    esp_err_t err = driver_hal_->wifi_start();
     if (err != ESP_OK) {
         state_machine_->transition_to(state);
         sync_manager_->set_bits(START_FAILED_BIT);
@@ -582,7 +578,7 @@ void WiFiManager::handle_start(const Message &msg, State state)
 void WiFiManager::handle_stop(const Message &msg, State state)
 {
     state_machine_->transition_to(State::STOPPING);
-    esp_err_t err = driver_hal_->stop();
+    esp_err_t err = driver_hal_->wifi_stop();
     if (err != ESP_OK) {
         state_machine_->transition_to(state);
         sync_manager_->set_bits(STOP_FAILED_BIT);
@@ -592,7 +588,7 @@ void WiFiManager::handle_stop(const Message &msg, State state)
 void WiFiManager::handle_connect(const Message &msg, State state)
 {
     state_machine_->transition_to(State::CONNECTING);
-    esp_err_t err = driver_hal_->connect();
+    esp_err_t err = driver_hal_->wifi_connect();
     if (err != ESP_OK) {
         state_machine_->transition_to(state);
         sync_manager_->set_bits(CONNECT_FAILED_BIT);
@@ -603,12 +599,12 @@ void WiFiManager::handle_disconnect(const Message &msg, State state)
 {
     if (state == State::WAITING_RECONNECT || state == State::CONNECTING) {
         state_machine_->transition_to(State::DISCONNECTED);
-        driver_hal_->disconnect();
+        driver_hal_->wifi_disconnect();
         sync_manager_->set_bits(DISCONNECTED_BIT);
         return;
     }
     state_machine_->transition_to(State::DISCONNECTING);
-    esp_err_t err = driver_hal_->disconnect();
+    esp_err_t err = driver_hal_->wifi_disconnect();
     if (err != ESP_OK) {
         state_machine_->transition_to(state);
         sync_manager_->set_bits(CONNECT_FAILED_BIT);
@@ -696,7 +692,7 @@ void WiFiManager::wifi_task(void *pvParameters)
             if (self->state_machine_->get_current_state() == State::WAITING_RECONNECT) {
                 if (self->storage_->is_valid()) {
                     self->state_machine_->transition_to(State::CONNECTING);
-                    self->driver_hal_->connect();
+                    self->driver_hal_->wifi_connect();
                 }
                 else {
                     self->state_machine_->transition_to(State::DISCONNECTED);
