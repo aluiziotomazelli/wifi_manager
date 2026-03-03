@@ -4,7 +4,6 @@ idf_component_register(
         "src/wifi_manager.cpp"
         "src/wifi_config_storage.cpp"
         "src/wifi_state_machine.cpp"
-        "src/wifi_driver_hal.cpp"
         "src/wifi_event_handler.cpp"
         "src/wifi_sync_manager.cpp"
                     
