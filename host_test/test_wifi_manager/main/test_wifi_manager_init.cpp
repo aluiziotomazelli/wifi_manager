@@ -8,11 +8,11 @@
 #include "wifi_state_machine.hpp"
 #include "wifi_sync_manager.hpp"
 
+#include "mock_wifi_bootstrapper.hpp"
 #include "mock_wifi_config_storage.hpp"
 #include "mock_wifi_driver_hal.hpp"
 #include "mock_wifi_state_machine.hpp"
 #include "mock_wifi_sync_manager.hpp"
-#include "mock_wifi_bootstrapper.hpp"
 
 using namespace wifi_manager;
 using namespace testing;
@@ -53,17 +53,11 @@ protected:
             std::move(bootstrapper_owned));
     }
 
-    void TearDown() override
-    {
-        current_state = State::UNINITIALIZED;
-    }
+    void TearDown() override { current_state = State::UNINITIALIZED; }
 
     State current_state = State::UNINITIALIZED;
 
-    void setup_successful_init()
-    {
-        ON_CALL(*bootstrapper, init(_, _)).WillByDefault(Return(ESP_OK));
-    }
+    void setup_successful_init() { ON_CALL(*bootstrapper, init(_, _, _)).WillByDefault(Return(ESP_OK)); }
 };
 
 TEST_F(WiFiManagerInitTest, InitAlreadyInitializedReturnsOkWithoutCallingBootstrapper)
@@ -75,14 +69,14 @@ TEST_F(WiFiManagerInitTest, InitAlreadyInitializedReturnsOkWithoutCallingBootstr
     ASSERT_EQ(State::INITIALIZED, manager->get_state());
 
     // Second init must return ESP_OK immediately without calling bootstrapper again
-    EXPECT_CALL(*bootstrapper, init(_, _)).Times(0);
+    EXPECT_CALL(*bootstrapper, init(_, _, _)).Times(0);
 
     EXPECT_EQ(ESP_OK, manager->init());
 }
 
 TEST_F(WiFiManagerInitTest, InitBootstrapperFailurePropagatesError)
 {
-    EXPECT_CALL(*bootstrapper, init(_, _)).WillOnce(Return(ESP_FAIL));
+    EXPECT_CALL(*bootstrapper, init(_, _, _)).WillOnce(Return(ESP_FAIL));
 
     EXPECT_EQ(ESP_FAIL, manager->init());
 
