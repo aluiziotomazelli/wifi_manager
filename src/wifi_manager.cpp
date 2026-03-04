@@ -34,8 +34,7 @@ WiFiManager &WiFiManager::get_instance()
     static auto sync_manager = std::make_unique<WiFiSyncManager>();
     static auto timer_hal = std::make_unique<EspTimerHAL>();
     static auto state_machine = std::make_unique<WiFiStateMachine>(*timer_hal);
-    static auto bootstrapper = std::make_unique<WiFiBootstrapper>(
-        *driver_hal, *storage, *sync_manager);
+    static auto bootstrapper = std::make_unique<WiFiBootstrapper>(*driver_hal, *storage, *sync_manager);
 
     static WiFiManager instance(
         std::move(driver_hal),
@@ -90,7 +89,8 @@ esp_err_t WiFiManager::init()
     state_machine_->transition_to(State::INITIALIZING);
     xSemaphoreGiveRecursive(state_mutex_);
 
-    esp_err_t err = bootstrapper_->init(this, &task_handle_);
+    // Pass wifi_task explicitly; WiFiBootstrapper is agnostic about which function it creates.
+    esp_err_t err = bootstrapper_->init(WiFiManager::wifi_task, this, &task_handle_);
     if (err != ESP_OK) {
         xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
         state_machine_->transition_to(State::UNINITIALIZED);
@@ -340,14 +340,14 @@ esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::strin
     }
 
     esp_err_t err = storage_->save_credentials(ssid, password);
-    if (err == ESP_OK) {
-        // state_machine_->reset_retries();
-        // wifi_config_t cfg;
-        // memset(&cfg, 0, sizeof(cfg));
-        // strncpy((char *)cfg.sta.ssid, ssid.c_str(), sizeof(cfg.sta.ssid));
-        // strncpy((char *)cfg.sta.password, password.c_str(), sizeof(cfg.sta.password));
-        // driver_hal_->wifi_set_config(&cfg);
-    }
+    // if (err == ESP_OK) {
+    //     state_machine_->reset_retries();
+    //     wifi_config_t cfg;
+    //     memset(&cfg, 0, sizeof(cfg));
+    //     strncpy((char *)cfg.sta.ssid, ssid.c_str(), sizeof(cfg.sta.ssid));
+    //     strncpy((char *)cfg.sta.password, password.c_str(), sizeof(cfg.sta.password));
+    //     driver_hal_->wifi_set_config(&cfg);
+    // }
 
     xSemaphoreGiveRecursive(state_mutex_);
     return err;

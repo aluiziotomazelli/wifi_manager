@@ -17,11 +17,17 @@ public:
 
     /**
      * @brief Initialize all WiFi sub-components and start the background task.
-     * @param pvParameters Pointer to the WiFiManager instance to be passed to the task.
+     *
+     * The task function is injected as a parameter so that WiFiBootstrapper does not depend
+     * on any concrete WiFiManager symbol. The caller (WiFiManager) is responsible for passing
+     * its own static task entry point (e.g. WiFiManager::wifi_task).
+     *
+     * @param task_fn     FreeRTOS-compatible task entry point (void(*)(void*)).
+     * @param pvParameters Opaque pointer forwarded to the task on creation (typically `this`).
      * @param pxTaskHandle Output pointer to the created task handle.
      * @return ESP_OK on success, or an error code on failure.
      */
-    virtual esp_err_t init(void *pvParameters, TaskHandle_t *pxTaskHandle) = 0;
+    virtual esp_err_t init(TaskFunction_t task_fn, void *pvParameters, TaskHandle_t *pxTaskHandle) = 0;
 
     /**
      * @brief Deinitialize all WiFi sub-components and stop the background task.

@@ -1,7 +1,8 @@
 #include "wifi_bootstrapper.hpp"
 #include "esp_log.h"
 #include "wifi_event_handler.hpp"
-#include "wifi_manager.hpp"
+// wifi_manager.hpp is intentionally NOT included here. The task entry point is
+// injected via init(task_fn) so WiFiBootstrapper has no dependency on WiFiManager.
 
 static const char *TAG = "WiFiBootstrapper";
 
@@ -18,7 +19,7 @@ WiFiBootstrapper::WiFiBootstrapper(
 {
 }
 
-esp_err_t WiFiBootstrapper::init(void *pvParameters, TaskHandle_t *pxTaskHandle)
+esp_err_t WiFiBootstrapper::init(TaskFunction_t task_fn, void *pvParameters, TaskHandle_t *pxTaskHandle)
 {
     esp_err_t err = storage_.init();
     if (err != ESP_OK) {
@@ -86,8 +87,9 @@ esp_err_t WiFiBootstrapper::init(void *pvParameters, TaskHandle_t *pxTaskHandle)
 
     storage_.ensure_config_fallback();
 
-    BaseType_t task_created = driver_hal_.task_create(
-        WiFiBootstrapper::wifi_task_trampoline, "wifi_task", 4096, pvParameters, 5, pxTaskHandle);
+    // Use the injected task function pointer instead of a hardcoded symbol,
+    // keeping WiFiBootstrapper decoupled from any concrete WiFiManager type.
+    BaseType_t task_created = driver_hal_.task_create(task_fn, "wifi_task", 4096, pvParameters, 5, pxTaskHandle);
     if (task_created != pdPASS) {
         ESP_LOGE(TAG, "Failed to create wifi task");
         deinit(pxTaskHandle);
@@ -143,11 +145,6 @@ esp_err_t WiFiBootstrapper::deinit(TaskHandle_t *pxTaskHandle)
     sync_manager_.deinit();
 
     return ret;
-}
-
-void WiFiBootstrapper::wifi_task_trampoline(void *pvParameters)
-{
-    WiFiManager::wifi_task(pvParameters);
 }
 
 } // namespace wifi_manager
