@@ -9,8 +9,8 @@ namespace wifi_manager {
 class MockWiFiBootstrapper : public IWiFiBootstrapper
 {
 public:
-    MOCK_METHOD(esp_err_t, init, (void *pvParameters, TaskHandle_t *pxTaskHandle), (override));
-    MOCK_METHOD(esp_err_t, deinit, (TaskHandle_t *pxTaskHandle), (override));
+    MOCK_METHOD(esp_err_t, init, (TaskFunction_t task_fn, void *pvParameters, TaskHandle_t *pxTaskHandle), (override));
+    MOCK_METHOD(esp_err_t, deinit, (TaskHandle_t * pxTaskHandle), (override));
 };
 
 } // namespace wifi_manager
