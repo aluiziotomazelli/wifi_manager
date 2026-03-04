@@ -28,31 +28,40 @@ esp_err_t WiFiConfigStorage::init()
         }
         err = nvs_flash_init();
     }
-    if (err != ESP_OK) {
-        return err;
+
+    if (err == ESP_OK) {
+        err = load_valid_flag();
     }
 
-    return load_valid_flag();
+    return err;
 }
 
 esp_err_t WiFiConfigStorage::save_credentials(const std::string &ssid, const std::string &password)
 {
-    wifi_config_t wifi_config = {};
-    size_t ssid_len = ssid.length() > 32 ? 32 : ssid.length();
-    memcpy(wifi_config.sta.ssid, ssid.c_str(), ssid_len);
+    esp_err_t err;
 
-    size_t pass_len = password.length() > 64 ? 64 : password.length();
-    memcpy(wifi_config.sta.password, password.c_str(), pass_len);
+    if (ssid.length() > 32 || password.length() > 64) {
+        ESP_LOGE(TAG, "SSID or password too long");
+        err = ESP_ERR_INVALID_ARG;
+    }
+    else {
+        wifi_config_t wifi_config = {};
+        size_t ssid_len = ssid.length();
+        memcpy(wifi_config.sta.ssid, ssid.c_str(), ssid_len);
 
-    wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
-    wifi_config.sta.failure_retry_cnt = 0;
-    wifi_config.sta.pmf_cfg.capable = true;
-    wifi_config.sta.pmf_cfg.required = false;
-    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+        size_t pass_len = password.length();
+        memcpy(wifi_config.sta.password, password.c_str(), pass_len);
 
-    esp_err_t err = hal_.wifi_set_config(&wifi_config);
-    if (err == ESP_OK) {
-        return save_valid_flag(true);
+        wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+        wifi_config.sta.failure_retry_cnt = 0;
+        wifi_config.sta.pmf_cfg.capable = true;
+        wifi_config.sta.pmf_cfg.required = false;
+        wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+
+        err = hal_.wifi_set_config(&wifi_config);
+        if (err == ESP_OK) {
+            err = save_valid_flag(true);
+        }
     }
     return err;
 }
@@ -154,6 +163,11 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
 
 esp_err_t WiFiConfigStorage::ensure_config_fallback()
 {
+    static_assert(sizeof(CONFIG_WIFI_SSID) - 1 <= 32, "CONFIG_WIFI_SSID exceeds maximum SSID length of 32 characters");
+    static_assert(
+        sizeof(CONFIG_WIFI_PASSWORD) - 1 <= 64,
+        "CONFIG_WIFI_PASSWORD exceeds maximum password length of 64 characters");
+
     wifi_config_t current_conf;
     esp_err_t err = hal_.wifi_get_config(&current_conf);
     if (err != ESP_OK) {
