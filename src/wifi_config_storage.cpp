@@ -1,6 +1,5 @@
 #include "wifi_config_storage.hpp"
 #include "esp_log.h"
-#include "nvs.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 #include "wifi_driver_hal.hpp"
