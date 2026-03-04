@@ -84,6 +84,7 @@ esp_err_t WiFiManager::init()
     esp_err_t err = storage_->init();
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize Storage/NVS: %s", esp_err_to_name(err));
+        deinit();
         return err;
     }
 

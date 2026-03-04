@@ -10,6 +10,8 @@
 
 #include "mock_wifi_config_storage.hpp"
 #include "mock_wifi_driver_hal.hpp"
+#include "mock_wifi_state_machine.hpp"
+#include "mock_wifi_sync_manager.hpp"
 
 using namespace wifi_manager;
 using namespace testing;
@@ -23,23 +25,41 @@ class WiFiManagerInitTest : public ::testing::Test
 protected:
     NiceMock<MockWiFiDriverHAL> *driver_hal;
     NiceMock<MockWiFiConfigStorage> *storage;
-    WiFiSyncManager *sync_manager;
-    WiFiStateMachine *state_machine;
+    NiceMock<MockWiFiSyncManager> *sync_manager;
+    NiceMock<MockWiFiStateMachine> *state_machine;
 
     std::unique_ptr<WiFiManager> manager;
+
+    // Real FreeRTOS objects for the task to work
+    QueueHandle_t real_queue = nullptr;
+    EventGroupHandle_t real_event_group = nullptr;
 
     void SetUp() override
     {
         auto driver_hal_owned = std::make_unique<NiceMock<MockWiFiDriverHAL>>();
         auto storage_owned = std::make_unique<NiceMock<MockWiFiConfigStorage>>();
-        auto sync_manager_owned = std::make_unique<WiFiSyncManager>();
-        auto timer_hal_owned = std::make_unique<EspTimerHAL>();
-        auto state_machine_owned = std::make_unique<WiFiStateMachine>(*timer_hal_owned);
+        auto sync_manager_owned = std::make_unique<NiceMock<MockWiFiSyncManager>>();
+        auto state_machine_owned = std::make_unique<NiceMock<MockWiFiStateMachine>>();
 
         driver_hal = driver_hal_owned.get();
         storage = storage_owned.get();
         sync_manager = sync_manager_owned.get();
         state_machine = state_machine_owned.get();
+
+        // Setup Task synchronization mocks
+        real_queue = xQueueCreate(10, sizeof(wifi_manager::Message));
+        real_event_group = xEventGroupCreate();
+
+        ON_CALL(*sync_manager, get_queue()).WillByDefault(Return(real_queue));
+        ON_CALL(*sync_manager, get_event_group()).WillByDefault(Return(real_event_group));
+        ON_CALL(*sync_manager, is_initialized()).WillByDefault(ReturnPointee(&sync_initialized));
+        ON_CALL(*sync_manager, post_message(_)).WillByDefault(Invoke([this](const wifi_manager::Message &msg) {
+            return xQueueSend(real_queue, &msg, 0) == pdTRUE ? ESP_OK : ESP_FAIL;
+        }));
+
+        ON_CALL(*state_machine, get_wait_ms()).WillByDefault(Return(0xFFFFFFFF));
+        ON_CALL(*state_machine, get_current_state()).WillByDefault(ReturnPointee(&current_state));
+        ON_CALL(*state_machine, transition_to(_)).WillByDefault(SaveArg<0>(&current_state));
 
         manager = std::make_unique<WiFiManager>(
             std::move(driver_hal_owned),
@@ -50,15 +70,26 @@ protected:
 
     void TearDown() override
     {
-        // Send EXIT to stop wifi_task cleanly before mocks are destroyed
-        if (sync_manager->is_initialized()) {
+        // Stop the task if it was started
+        if (real_queue) {
             wifi_manager::Message msg = {};
-            msg.type = wifi_manager::MessageType::COMMAND;
-            msg.cmd = wifi_manager::CommandId::EXIT;
-            sync_manager->post_message(msg);
+            msg.type = MessageType::COMMAND;
+            msg.cmd = CommandId::EXIT;
+            xQueueSend(real_queue, &msg, 0);
             vTaskDelay(pdMS_TO_TICKS(100));
+            vQueueDelete(real_queue);
+            real_queue = nullptr;
         }
+        if (real_event_group) {
+            vEventGroupDelete(real_event_group);
+            real_event_group = nullptr;
+        }
+        sync_initialized = false;
+        current_state = State::UNINITIALIZED;
     }
+
+    State current_state = State::UNINITIALIZED;
+    bool sync_initialized = false;
 
     // Helper: set up all happy-path ON_CALLs for a full successful init()
     void setup_successful_init()
@@ -74,7 +105,16 @@ protected:
 
         ON_CALL(*driver_hal, wifi_init(_)).WillByDefault(Return(ESP_OK));
         ON_CALL(*driver_hal, wifi_set_mode(_)).WillByDefault(Return(ESP_OK));
-        ON_CALL(*driver_hal, event_handler_instance_register(_, _, _, _, _)).WillByDefault(Return(ESP_OK));
+
+        // Return a dummy pointer for event instances to allow unregister to be called
+        ON_CALL(*driver_hal, event_handler_instance_register(_, _, _, _, _))
+            .WillByDefault(DoAll(SetArgPointee<4>(reinterpret_cast<esp_event_handler_instance_t>(0x123)), Return(ESP_OK)));
+
+        ON_CALL(*sync_manager, init()).WillByDefault(Invoke([this]() {
+            sync_initialized = true;
+            return ESP_OK;
+        }));
+
         ON_CALL(*storage, ensure_config_fallback()).WillByDefault(Return(ESP_OK));
     }
 };
@@ -174,6 +214,22 @@ TEST_F(WiFiManagerInitTest, InitWifiSetModeFailureTriggersDeinit)
     EXPECT_CALL(*driver_hal, wifi_set_mode(_)).WillOnce(Return(ESP_FAIL));
 
     EXPECT_EQ(ESP_FAIL, manager->init());
+    EXPECT_EQ(State::UNINITIALIZED, manager->get_state());
+}
+
+TEST_F(WiFiManagerInitTest, InitSyncManagerFailureTriggersDeinit)
+{
+    ON_CALL(*storage, init()).WillByDefault(Return(ESP_OK));
+    ON_CALL(*driver_hal, netif_init()).WillByDefault(Return(ESP_OK));
+    ON_CALL(*driver_hal, event_loop_create_default()).WillByDefault(Return(ESP_OK));
+    ON_CALL(*driver_hal, netif_get_handle_from_ifkey(_)).WillByDefault(Return(nullptr));
+    ON_CALL(*driver_hal, netif_create_default_wifi_sta()).WillByDefault(Return(reinterpret_cast<esp_netif_t *>(0x1)));
+    ON_CALL(*driver_hal, wifi_init(_)).WillByDefault(Return(ESP_OK));
+    ON_CALL(*driver_hal, wifi_set_mode(_)).WillByDefault(Return(ESP_OK));
+
+    EXPECT_CALL(*sync_manager, init()).WillOnce(Return(ESP_ERR_NO_MEM));
+
+    EXPECT_EQ(ESP_ERR_NO_MEM, manager->init());
     EXPECT_EQ(State::UNINITIALIZED, manager->get_state());
 }
 
@@ -297,8 +353,9 @@ TEST_F(WiFiManagerInitTest, DeinitAfterInitUnregistersEventHandlers)
     ASSERT_EQ(ESP_OK, manager->init());
 
     // Both handlers must be unregistered during deinit
-    EXPECT_CALL(*driver_hal, event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, _)).Times(1);
-    EXPECT_CALL(*driver_hal, event_handler_instance_unregister(IP_EVENT, ESP_EVENT_ANY_ID, _)).Times(1);
+    // The instance must match the one returned during register (0x123)
+    EXPECT_CALL(*driver_hal, event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, reinterpret_cast<esp_event_handler_instance_t>(0x123))).Times(1);
+    EXPECT_CALL(*driver_hal, event_handler_instance_unregister(IP_EVENT, ESP_EVENT_ANY_ID, reinterpret_cast<esp_event_handler_instance_t>(0x123))).Times(1);
 
     manager->deinit();
 }
