@@ -70,19 +70,6 @@ WiFiManager::~WiFiManager()
 // Public API
 // =================================================================================================
 
-esp_err_t WiFiManager::init_nvs()
-{
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_LOGW(TAG, "NVS partition invalid, erasing");
-        err = nvs_flash_erase();
-        if (err != ESP_OK)
-            return err;
-        err = nvs_flash_init();
-    }
-    return err;
-}
-
 esp_err_t WiFiManager::init()
 {
     xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
