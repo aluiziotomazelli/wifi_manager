@@ -44,6 +44,17 @@ public:
     MOCK_METHOD(esp_err_t, wifi_get_config, (wifi_config_t * cfg), (override));
     MOCK_METHOD(esp_err_t, wifi_deinit, (), (override));
     MOCK_METHOD(void, netif_destroy_default_wifi, (esp_netif_t * netif), (override));
+    MOCK_METHOD(
+        BaseType_t,
+        task_create,
+        (TaskFunction_t pvTaskCode,
+         const char *const pcName,
+         const uint32_t usStackDepth,
+         void *const pvParameters,
+         UBaseType_t uxPriority,
+         TaskHandle_t *const pxCreatedTask),
+        (override));
+    MOCK_METHOD(void, task_delete, (TaskHandle_t xTaskToDelete), (override));
 };
 
 class WiFiConfigStorageTest : public ::testing::Test

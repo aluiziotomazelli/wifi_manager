@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Append extra component directories so IDF can find our local components.
-list(APPEND EXTRA_COMPONENT_DIRS 
-    "../.."                              # The 'ultrasonic_sensor' component being tested
-    "../gtest"                           # The GTest wrapper component
+list(APPEND EXTRA_COMPONENT_DIRS
+    "../.."
+    "../gtest"
+    "../common"
     "$ENV{IDF_PATH}/tools/mocks/esp_wifi"
     "$ENV{IDF_PATH}/tools/mocks/esp_netif"
     "$ENV{IDF_PATH}/tools/mocks/esp_event"
@@ -16,8 +17,8 @@ set(COMPONENTS main wifi_manager)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project(test_sync_manager)
+project(test_bootstrapper)
 
 # Include common coverage logic
  #include("../coverage_common.cmake")
- #setup_gtest_coverage(test_sync_manager test_sync_manager.elf)
+ #setup_gtest_coverage(test_bootstrapper test_bootstrapper.elf)

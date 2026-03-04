@@ -70,6 +70,20 @@ public:
     // Cleanup
     esp_err_t wifi_deinit() override { return esp_wifi_deinit(); };
     void netif_destroy_default_wifi(esp_netif_t *netif) override { esp_netif_destroy_default_wifi(netif); };
+
+    // Task Operations
+    BaseType_t task_create(
+        TaskFunction_t pvTaskCode,
+        const char *const pcName,
+        const uint32_t usStackDepth,
+        void *const pvParameters,
+        UBaseType_t uxPriority,
+        TaskHandle_t *const pxCreatedTask) override
+    {
+        return xTaskCreate(pvTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
+    }
+
+    void task_delete(TaskHandle_t xTaskToDelete) override { vTaskDelete(xTaskToDelete); }
 };
 
 } // namespace wifi_manager

@@ -20,5 +20,5 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(test_wifi_manager)
 
 # Include common coverage logic
-include("../coverage_common.cmake")
-setup_gtest_coverage(test_wifi_manager test_wifi_manager.elf)
+ #include("../coverage_common.cmake")
+ #setup_gtest_coverage(test_wifi_manager test_wifi_manager.elf)

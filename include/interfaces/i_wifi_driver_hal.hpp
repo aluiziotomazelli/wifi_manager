@@ -51,6 +51,16 @@ public:
     // Cleanup
     virtual esp_err_t wifi_deinit() = 0;
     virtual void netif_destroy_default_wifi(esp_netif_t *netif) = 0;
+
+    // Task Operations
+    virtual BaseType_t task_create(
+        TaskFunction_t pvTaskCode,
+        const char *const pcName,
+        const uint32_t usStackDepth,
+        void *const pvParameters,
+        UBaseType_t uxPriority,
+        TaskHandle_t *const pxCreatedTask) = 0;
+    virtual void task_delete(TaskHandle_t xTaskToDelete) = 0;
 };
 
 } // namespace wifi_manager

@@ -6,6 +6,7 @@ idf_component_register(
         "src/wifi_state_machine.cpp"
         "src/wifi_event_handler.cpp"
         "src/wifi_sync_manager.cpp"
+        "src/wifi_bootstrapper.cpp"
                     
     INCLUDE_DIRS 
         "include"

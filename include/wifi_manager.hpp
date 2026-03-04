@@ -10,6 +10,7 @@
 #include "interfaces/i_wifi_manager.hpp"
 #include "interfaces/i_wifi_state_machine.hpp"
 #include "interfaces/i_wifi_sync_manager.hpp"
+#include "interfaces/i_wifi_bootstrapper.hpp"
 
 // Forward declaration for test accessor
 class WiFiManagerTestAccessor;
@@ -45,7 +46,8 @@ public:
         std::unique_ptr<IWiFiDriverHAL> driver_hal,
         std::unique_ptr<IWiFiConfigStorage> storage,
         std::unique_ptr<IWiFiSyncManager> sync_manager,
-        std::unique_ptr<IWiFiStateMachine> state_machine);
+        std::unique_ptr<IWiFiStateMachine> state_machine,
+        std::unique_ptr<IWiFiBootstrapper> bootstrapper);
 
     // Prevent copying and assignment
     WiFiManager(const WiFiManager &) = delete;
@@ -87,6 +89,9 @@ private:
     // Main FreeRTOS task loop that executes driver operations
     static void wifi_task(void *pvParameters);
 
+    // Allow Bootstrapper to call the task trampoline
+    friend class WiFiBootstrapper;
+
     // Private helper to post messages to the internal queue
     esp_err_t post_message(const Message &msg, bool is_async);
 
@@ -95,14 +100,11 @@ private:
     std::unique_ptr<IWiFiStateMachine> state_machine_;
     std::unique_ptr<IWiFiDriverHAL> driver_hal_;
     std::unique_ptr<IWiFiSyncManager> sync_manager_;
+    std::unique_ptr<IWiFiBootstrapper> bootstrapper_;
 
     // --- Private Members ---
     TaskHandle_t task_handle_;              ///< Task handling internal state
     mutable SemaphoreHandle_t state_mutex_; ///< Recursive mutex for thread-safe state access
-
-    esp_event_handler_instance_t wifi_event_instance_ = nullptr; ///< Instance for WiFi event handler
-    esp_event_handler_instance_t ip_event_instance_ = nullptr;   ///< Instance for IP event handler
-    esp_netif_t *sta_netif_ = nullptr;                           ///< Netif handle for STA interface
 
     /**
      * @brief Resolves the next state and sync bits for a given event.

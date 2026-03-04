@@ -13,6 +13,7 @@
 
 // Concrete implementations for the factory
 #include "esp_timer_hal.hpp"
+#include "wifi_bootstrapper.hpp"
 #include "wifi_config_storage.hpp"
 #include "wifi_driver_hal.hpp"
 #include "wifi_state_machine.hpp"
@@ -33,9 +34,15 @@ WiFiManager &WiFiManager::get_instance()
     static auto sync_manager = std::make_unique<WiFiSyncManager>();
     static auto timer_hal = std::make_unique<EspTimerHAL>();
     static auto state_machine = std::make_unique<WiFiStateMachine>(*timer_hal);
+    static auto bootstrapper = std::make_unique<WiFiBootstrapper>(
+        *driver_hal, *storage, *sync_manager);
 
     static WiFiManager instance(
-        std::move(driver_hal), std::move(storage), std::move(sync_manager), std::move(state_machine));
+        std::move(driver_hal),
+        std::move(storage),
+        std::move(sync_manager),
+        std::move(state_machine),
+        std::move(bootstrapper));
     return instance;
 }
 
@@ -43,11 +50,13 @@ WiFiManager::WiFiManager(
     std::unique_ptr<IWiFiDriverHAL> driver_hal,
     std::unique_ptr<IWiFiConfigStorage> storage,
     std::unique_ptr<IWiFiSyncManager> sync_manager,
-    std::unique_ptr<IWiFiStateMachine> state_machine)
+    std::unique_ptr<IWiFiStateMachine> state_machine,
+    std::unique_ptr<IWiFiBootstrapper> bootstrapper)
     : storage_(std::move(storage))
     , state_machine_(std::move(state_machine))
     , driver_hal_(std::move(driver_hal))
     , sync_manager_(std::move(sync_manager))
+    , bootstrapper_(std::move(bootstrapper))
 {
     state_mutex_ = xSemaphoreCreateRecursiveMutex();
     task_handle_ = nullptr;
@@ -81,86 +90,12 @@ esp_err_t WiFiManager::init()
     state_machine_->transition_to(State::INITIALIZING);
     xSemaphoreGiveRecursive(state_mutex_);
 
-    esp_err_t err = storage_->init();
+    esp_err_t err = bootstrapper_->init(this, &task_handle_);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize Storage/NVS: %s", esp_err_to_name(err));
-        deinit();
+        xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
+        state_machine_->transition_to(State::UNINITIALIZED);
+        xSemaphoreGiveRecursive(state_mutex_);
         return err;
-    }
-
-    err = driver_hal_->netif_init();
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(TAG, "Failed to esp_netif_init: %s", esp_err_to_name(err));
-        deinit();
-        return err;
-    }
-    if (err == ESP_ERR_INVALID_STATE) {
-        ESP_LOGW(TAG, "Netif already initialized.");
-    }
-
-    err = driver_hal_->event_loop_create_default();
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-        ESP_LOGE(TAG, "Failed to create event loop: %s", esp_err_to_name(err));
-        deinit();
-        return err;
-    }
-    if (err == ESP_ERR_INVALID_STATE) {
-        ESP_LOGW(TAG, "Event loop already created.");
-    }
-
-    sta_netif_ = driver_hal_->netif_get_handle_from_ifkey("WIFI_STA_DEF");
-    if (sta_netif_ == nullptr) {
-        sta_netif_ = driver_hal_->netif_create_default_wifi_sta();
-    }
-    if (sta_netif_ == nullptr) {
-        ESP_LOGE(TAG, "Failed to create default WiFi STA netif");
-        deinit();
-        return ESP_ERR_NO_MEM;
-    }
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    err = driver_hal_->wifi_init(&cfg);
-    if (err != ESP_OK) {
-        deinit();
-        ESP_LOGE(TAG, "Failed to esp_wifi_init: %s", esp_err_to_name(err));
-        return err;
-    }
-
-    err = driver_hal_->wifi_set_mode(WIFI_MODE_STA);
-    if (err != ESP_OK) {
-        deinit();
-        return err;
-    }
-
-    err = sync_manager_->init();
-    if (err != ESP_OK) {
-        deinit();
-        return err;
-    }
-
-    // Use member or static instance of WiFiEventHandler
-    static WiFiEventHandler event_handler(sync_manager_.get());
-
-    err = driver_hal_->event_handler_instance_register(
-        WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiEventHandler::wifi_event_callback, &event_handler, &wifi_event_instance_);
-    if (err != ESP_OK) {
-        deinit();
-        return err;
-    }
-    err = driver_hal_->event_handler_instance_register(
-        IP_EVENT, ESP_EVENT_ANY_ID, &WiFiEventHandler::ip_event_callback, &event_handler, &ip_event_instance_);
-    if (err != ESP_OK) {
-        deinit();
-        return err;
-    }
-
-    storage_->ensure_config_fallback();
-
-    BaseType_t task_created = xTaskCreate(wifi_task, "wifi_task", 4096, this, 5, &task_handle_);
-    if (task_created != pdPASS) {
-        ESP_LOGE(TAG, "Failed to create wifi task");
-        deinit();
-        return ESP_ERR_NO_MEM;
     }
 
     xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
@@ -184,59 +119,7 @@ esp_err_t WiFiManager::deinit()
         stop(2000);
     }
 
-    if (task_handle_ != nullptr) {
-        ESP_LOGI(TAG, "Stopping WiFi task...");
-        Message msg = {};
-        msg.type = MessageType::COMMAND;
-        msg.cmd = CommandId::EXIT;
-        if (sync_manager_->is_initialized() && sync_manager_->post_message(msg) == ESP_OK) {
-            int retry = 0;
-            while (task_handle_ != nullptr && retry < 100) {
-                vTaskDelay(pdMS_TO_TICKS(10));
-                retry++;
-            }
-            if (task_handle_ == nullptr) {
-                vTaskDelay(pdMS_TO_TICKS(50));
-            }
-        }
-
-        if (task_handle_ != nullptr) {
-            ESP_LOGW(TAG, "WiFi task did not exit gracefully, deleting...");
-            vTaskDelete(task_handle_);
-            task_handle_ = nullptr;
-        }
-        ESP_LOGI(TAG, "WiFi task terminated.");
-    }
-
-    esp_err_t ret = ESP_OK;
-    esp_err_t err;
-
-    if (wifi_event_instance_ != nullptr) {
-        err = driver_hal_->event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_instance_);
-        wifi_event_instance_ = nullptr;
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to unregister WiFi event handler: %s", esp_err_to_name(err));
-            ret = err;
-        }
-    }
-    if (ip_event_instance_ != nullptr) {
-        err = driver_hal_->event_handler_instance_unregister(IP_EVENT, ESP_EVENT_ANY_ID, ip_event_instance_);
-        ip_event_instance_ = nullptr;
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to unregister IP event handler: %s", esp_err_to_name(err));
-            ret = err;
-        }
-    }
-
-    err = driver_hal_->wifi_deinit();
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to deinitialize WiFi: %s", esp_err_to_name(err));
-        ret = err;
-    }
-
-    driver_hal_->netif_destroy_default_wifi(sta_netif_);
-
-    sync_manager_->deinit();
+    esp_err_t ret = bootstrapper_->deinit(&task_handle_);
 
     xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
     state_machine_->transition_to(State::UNINITIALIZED);
