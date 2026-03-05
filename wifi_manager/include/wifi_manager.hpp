@@ -11,6 +11,7 @@
 #include "interfaces/i_wifi_state_machine.hpp"
 #include "interfaces/i_wifi_sync_manager.hpp"
 #include "interfaces/i_wifi_bootstrapper.hpp"
+#include "interfaces/i_wifi_message_processor.hpp"
 
 // Forward declaration for test accessor
 class WiFiManagerTestAccessor;
@@ -47,7 +48,8 @@ public:
         std::unique_ptr<IWiFiConfigStorage> storage,
         std::unique_ptr<IWiFiSyncManager> sync_manager,
         std::unique_ptr<IWiFiStateMachine> state_machine,
-        std::unique_ptr<IWiFiBootstrapper> bootstrapper);
+        std::unique_ptr<IWiFiBootstrapper> bootstrapper,
+        std::unique_ptr<IWiFiMessageProcessor> processor);
 
     // Prevent copying and assignment
     WiFiManager(const WiFiManager &) = delete;
@@ -101,33 +103,12 @@ private:
     std::unique_ptr<IWiFiDriverHAL> driver_hal_;
     std::unique_ptr<IWiFiSyncManager> sync_manager_;
     std::unique_ptr<IWiFiBootstrapper> bootstrapper_;
+    std::unique_ptr<IWiFiMessageProcessor> processor_;
 
     // --- Private Members ---
     TaskHandle_t task_handle_;              ///< Task handling internal state
     mutable SemaphoreHandle_t state_mutex_; ///< Recursive mutex for thread-safe state access
 
-    /**
-     * @brief Resolves the next state and sync bits for a given event.
-     * @param event The system event received.
-     * @return EventOutcome The transition logic for the event.
-     */
-    EventOutcome resolve_event(EventId event) const;
-
-    // Command Handlers
-    void handle_start(const Message &msg, State state);
-    void handle_stop(const Message &msg, State state);
-    void handle_connect(const Message &msg, State state);
-    void handle_disconnect(const Message &msg, State state);
-
-    // Event Handler (LUT-based)
-    void handle_event(const Message &msg, State state);
-
-    /**
-     * @brief Central dispatcher for all incoming messages.
-     * @param msg The message (command or event) to process.
-     * @param state The current state of the manager (captured under mutex).
-     */
-    void process_message(const Message &msg, State state);
 };
 
 } // namespace wifi_manager

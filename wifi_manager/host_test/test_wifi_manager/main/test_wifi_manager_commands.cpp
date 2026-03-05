@@ -10,6 +10,7 @@
 #include "mock_wifi_driver_hal.hpp"
 #include "mock_wifi_state_machine.hpp"
 #include "mock_wifi_sync_manager.hpp"
+#include "mock_wifi_message_processor.hpp"
 
 using namespace wifi_manager;
 using namespace testing;
@@ -26,6 +27,7 @@ protected:
     NiceMock<MockWiFiSyncManager> *sync_manager;
     NiceMock<MockWiFiStateMachine> *state_machine;
     NiceMock<MockWiFiBootstrapper> *bootstrapper;
+    NiceMock<MockWiFiMessageProcessor> *processor;
 
     std::unique_ptr<WiFiManager> manager;
 
@@ -38,12 +40,14 @@ protected:
         auto sync_manager_owned = std::make_unique<NiceMock<MockWiFiSyncManager>>();
         auto state_machine_owned = std::make_unique<NiceMock<MockWiFiStateMachine>>();
         auto bootstrapper_owned = std::make_unique<NiceMock<MockWiFiBootstrapper>>();
+        auto processor_owned = std::make_unique<NiceMock<MockWiFiMessageProcessor>>();
 
         driver_hal = driver_hal_owned.get();
         storage = storage_owned.get();
         sync_manager = sync_manager_owned.get();
         state_machine = state_machine_owned.get();
         bootstrapper = bootstrapper_owned.get();
+        processor = processor_owned.get();
 
         ON_CALL(*state_machine, get_current_state()).WillByDefault(ReturnPointee(&current_state));
         ON_CALL(*state_machine, transition_to(_)).WillByDefault(SaveArg<0>(&current_state));
@@ -57,7 +61,8 @@ protected:
             std::move(storage_owned),
             std::move(sync_manager_owned),
             std::move(state_machine_owned),
-            std::move(bootstrapper_owned));
+            std::move(bootstrapper_owned),
+            std::move(processor_owned));
     }
 
     void TearDown() override { current_state = State::INITIALIZED; }

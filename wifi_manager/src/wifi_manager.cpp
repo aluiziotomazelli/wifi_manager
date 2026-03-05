@@ -18,6 +18,7 @@
 #include "wifi_driver_hal.hpp"
 #include "wifi_state_machine.hpp"
 #include "wifi_sync_manager.hpp"
+#include "wifi_message_processor.hpp"
 
 static const char *TAG = "WiFiManager";
 
@@ -35,13 +36,15 @@ WiFiManager &WiFiManager::get_instance()
     static auto timer_hal = std::make_unique<EspTimerHAL>();
     static auto state_machine = std::make_unique<WiFiStateMachine>(*timer_hal);
     static auto bootstrapper = std::make_unique<WiFiBootstrapper>(*driver_hal, *storage, *sync_manager);
+    static auto processor = std::make_unique<WiFiMessageProcessor>(*driver_hal, *storage, *state_machine, *sync_manager);
 
     static WiFiManager instance(
         std::move(driver_hal),
         std::move(storage),
         std::move(sync_manager),
         std::move(state_machine),
-        std::move(bootstrapper));
+        std::move(bootstrapper),
+        std::move(processor));
     return instance;
 }
 
@@ -50,12 +53,14 @@ WiFiManager::WiFiManager(
     std::unique_ptr<IWiFiConfigStorage> storage,
     std::unique_ptr<IWiFiSyncManager> sync_manager,
     std::unique_ptr<IWiFiStateMachine> state_machine,
-    std::unique_ptr<IWiFiBootstrapper> bootstrapper)
+    std::unique_ptr<IWiFiBootstrapper> bootstrapper,
+    std::unique_ptr<IWiFiMessageProcessor> processor)
     : storage_(std::move(storage))
     , state_machine_(std::move(state_machine))
     , driver_hal_(std::move(driver_hal))
     , sync_manager_(std::move(sync_manager))
     , bootstrapper_(std::move(bootstrapper))
+    , processor_(std::move(processor))
 {
     state_mutex_ = xSemaphoreCreateRecursiveMutex();
     task_handle_ = nullptr;
@@ -408,138 +413,6 @@ esp_err_t WiFiManager::post_message(const Message &msg, bool is_async)
     return err;
 }
 
-void WiFiManager::process_message(const Message &msg, State state)
-{
-    if (msg.type == MessageType::COMMAND) {
-        if (msg.cmd != CommandId::EXIT) {
-            state_machine_->reset_retries();
-        }
-        switch (msg.cmd) {
-        case CommandId::START:
-            handle_start(msg, state);
-            break;
-        case CommandId::STOP:
-            handle_stop(msg, state);
-            break;
-        case CommandId::CONNECT:
-            handle_connect(msg, state);
-            break;
-        case CommandId::DISCONNECT:
-            handle_disconnect(msg, state);
-            break;
-        default:
-            break;
-        }
-    }
-    else {
-        handle_event(msg, state);
-    }
-}
-
-void WiFiManager::handle_start(const Message &msg, State state)
-{
-    state_machine_->transition_to(State::STARTING);
-    esp_err_t err = driver_hal_->wifi_start();
-    if (err != ESP_OK) {
-        state_machine_->transition_to(state);
-        sync_manager_->set_bits(START_FAILED_BIT);
-    }
-}
-
-void WiFiManager::handle_stop(const Message &msg, State state)
-{
-    state_machine_->transition_to(State::STOPPING);
-    esp_err_t err = driver_hal_->wifi_stop();
-    if (err != ESP_OK) {
-        state_machine_->transition_to(state);
-        sync_manager_->set_bits(STOP_FAILED_BIT);
-    }
-}
-
-void WiFiManager::handle_connect(const Message &msg, State state)
-{
-    state_machine_->transition_to(State::CONNECTING);
-    esp_err_t err = driver_hal_->wifi_connect();
-    if (err != ESP_OK) {
-        state_machine_->transition_to(state);
-        sync_manager_->set_bits(CONNECT_FAILED_BIT);
-    }
-}
-
-void WiFiManager::handle_disconnect(const Message &msg, State state)
-{
-    if (state == State::WAITING_RECONNECT || state == State::CONNECTING) {
-        state_machine_->transition_to(State::DISCONNECTED);
-        driver_hal_->wifi_disconnect();
-        sync_manager_->set_bits(DISCONNECTED_BIT);
-        return;
-    }
-    state_machine_->transition_to(State::DISCONNECTING);
-    esp_err_t err = driver_hal_->wifi_disconnect();
-    if (err != ESP_OK) {
-        state_machine_->transition_to(state);
-        sync_manager_->set_bits(CONNECT_FAILED_BIT);
-    }
-}
-
-void WiFiManager::handle_event(const Message &msg, State state)
-{
-    EventOutcome outcome = state_machine_->resolve_event(msg.event);
-
-    if (outcome.next_state != state) {
-        state_machine_->transition_to(outcome.next_state);
-    }
-
-    if (outcome.bits_to_set != 0) {
-        sync_manager_->set_bits(outcome.bits_to_set);
-    }
-
-    switch (msg.event) {
-    case EventId::STA_DISCONNECTED:
-    {
-        if (state == State::DISCONNECTING || state == State::STOPPING || !state_machine_->is_active()) {
-            sync_manager_->set_bits(DISCONNECTED_BIT | CONNECT_FAILED_BIT);
-            break;
-        }
-        if (msg.reason == WIFI_REASON_ASSOC_LEAVE) {
-            state_machine_->transition_to(State::DISCONNECTED);
-            sync_manager_->set_bits(DISCONNECTED_BIT | CONNECT_FAILED_BIT);
-            break;
-        }
-
-        if (msg.reason == WIFI_REASON_AUTH_FAIL || msg.reason == WIFI_REASON_802_1X_AUTH_FAILED ||
-            msg.reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT || msg.reason == WIFI_REASON_HANDSHAKE_TIMEOUT ||
-            msg.reason == WIFI_REASON_CONNECTION_FAIL) {
-            if (state_machine_->handle_suspect_failure(msg.rssi)) {
-                storage_->save_valid_flag(false);
-            }
-            else {
-                uint32_t delay_ms;
-                state_machine_->calculate_next_backoff(delay_ms);
-            }
-            sync_manager_->set_bits(CONNECT_FAILED_BIT);
-            break;
-        }
-        if (storage_->is_valid()) {
-            uint32_t delay_ms;
-            state_machine_->calculate_next_backoff(delay_ms);
-        }
-        else {
-            state_machine_->transition_to(State::DISCONNECTED);
-        }
-        sync_manager_->set_bits(CONNECT_FAILED_BIT);
-        break;
-    }
-    case EventId::GOT_IP:
-        state_machine_->reset_retries();
-        if (!storage_->is_valid())
-            storage_->save_valid_flag(true);
-        break;
-    default:
-        break;
-    }
-}
-
 void WiFiManager::wifi_task(void *pvParameters)
 {
     WiFiManager *self = static_cast<WiFiManager *>(pvParameters);
@@ -555,20 +428,12 @@ void WiFiManager::wifi_task(void *pvParameters)
                 vTaskDelete(NULL);
                 return;
             }
-            self->process_message(msg, self->state_machine_->get_current_state());
+            self->processor_->process_message(msg, self->state_machine_->get_current_state());
             xSemaphoreGiveRecursive(self->state_mutex_);
         }
         else {
             xSemaphoreTakeRecursive(self->state_mutex_, portMAX_DELAY);
-            if (self->state_machine_->get_current_state() == State::WAITING_RECONNECT) {
-                if (self->storage_->is_valid()) {
-                    self->state_machine_->transition_to(State::CONNECTING);
-                    self->driver_hal_->wifi_connect();
-                }
-                else {
-                    self->state_machine_->transition_to(State::DISCONNECTED);
-                }
-            }
+            self->processor_->on_idle_tick(self->state_machine_->get_current_state());
             xSemaphoreGiveRecursive(self->state_mutex_);
         }
     }

@@ -1,7 +1,9 @@
 # components/wifi_manager/CMakeLists.txt
 idf_component_register(
+    NAME wifi_manager
     SRCS 
         "src/wifi_manager.cpp"
+        "src/wifi_message_processor.cpp"
         "src/wifi_config_storage.cpp"
         "src/wifi_state_machine.cpp"
         "src/wifi_event_handler.cpp"
