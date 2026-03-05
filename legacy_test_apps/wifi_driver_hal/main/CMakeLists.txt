@@ -1,0 +1,14 @@
+idf_component_register(
+    SRCS 
+        "main.c" 
+        "test_wifi_driver_hal.cpp"
+    INCLUDE_DIRS 
+        "."
+    REQUIRES 
+        unity 
+        wifi_manager 
+        nvs_flash 
+        esp_wifi 
+        esp_event
+        WHOLE_ARCHIVE
+        )
