@@ -121,3 +121,24 @@ TEST_F(WiFiManagerInitTest, DeinitTransitionsToUninitialized)
 
     EXPECT_EQ(State::UNINITIALIZED, manager->get_state());
 }
+
+TEST_F(WiFiManagerInitTest, DeinitWithActiveWifiPostsStopCommand)
+{
+    setup_successful_init();
+    ASSERT_EQ(ESP_OK, manager->init());
+
+    // Simulate active WiFi
+    ON_CALL(*state_machine, is_active()).WillByDefault(Return(true));
+
+    // validate_command for STOP must return EXECUTE for stop() to proceed
+    ON_CALL(*state_machine, validate_command(CommandId::STOP))
+        .WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
+
+    ON_CALL(*sync_manager, is_initialized()).WillByDefault(Return(true));
+    ON_CALL(*bootstrapper, deinit(_)).WillByDefault(Return(ESP_OK));
+
+    // stop(2000) internally calls post_message with STOP command
+    EXPECT_CALL(*sync_manager, post_message(Field(&wifi_manager::Message::cmd, CommandId::STOP))).Times(1);
+
+    manager->deinit();
+}

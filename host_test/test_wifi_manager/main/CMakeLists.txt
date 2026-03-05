@@ -1,8 +1,9 @@
 idf_component_register(
     SRCS
         "main.cpp"
-        "test_wifi_manager_init.cpp"
         "event_stubs.c"
+        "test_wifi_manager_init.cpp"
+        "test_wifi_manager_commands.cpp"
     INCLUDE_DIRS
         "."
         "../../common"
