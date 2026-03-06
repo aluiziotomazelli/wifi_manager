@@ -1,14 +1,13 @@
 #include <cstring>
 #include <memory>
 
-#include "esp_event.h"
 #define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#include "esp_event.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 
-#include "wifi_event_handler.hpp"
 #include "wifi_manager.hpp"
 
 // Concrete implementations for the factory
@@ -16,6 +15,7 @@
 #include "wifi_bootstrapper.hpp"
 #include "wifi_config_storage.hpp"
 #include "wifi_driver_hal.hpp"
+#include "wifi_event_handler.hpp"
 #include "wifi_message_processor.hpp"
 #include "wifi_state_machine.hpp"
 #include "wifi_sync_manager.hpp"
