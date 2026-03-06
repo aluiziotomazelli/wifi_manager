@@ -4,6 +4,7 @@ idf_component_register(
         "test_config_storage.cpp"
     INCLUDE_DIRS
         "."
+        "../../common"
     REQUIRES
         gtest
         wifi_manager
