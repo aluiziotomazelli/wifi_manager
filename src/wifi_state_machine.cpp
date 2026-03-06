@@ -36,89 +36,89 @@ const WiFiStateMachine::Action WiFiStateMachine::s_command_matrix[(int)State::CO
 
 const WiFiStateMachine::EventOutcome WiFiStateMachine::s_transition_matrix[(int)State::COUNT][(int)EventId::COUNT] = {
     /* UNINITIALIZED  */
-    {{State::UNINITIALIZED, 0},
-     {State::UNINITIALIZED, 0},
-     {State::UNINITIALIZED, 0},
-     {State::UNINITIALIZED, 0},
-     {State::UNINITIALIZED, 0},
-     {State::UNINITIALIZED, 0}},
+    {{State::UNINITIALIZED, 0},  ///< STA_START
+     {State::UNINITIALIZED, 0},  ///< STA_STOP
+     {State::UNINITIALIZED, 0},  ///< STA_CONNECT
+     {State::UNINITIALIZED, 0},  ///< STA_DISCONNECT
+     {State::UNINITIALIZED, 0},  ///< GOT_IP
+     {State::UNINITIALIZED, 0}}, ///< LOST_IP
     /* INITIALIZING   */
-    {{State::INITIALIZING, 0},
-     {State::INITIALIZING, 0},
-     {State::INITIALIZING, 0},
-     {State::INITIALIZING, 0},
-     {State::INITIALIZING, 0},
-     {State::INITIALIZING, 0}},
+    {{State::INITIALIZING, 0},  ///< STA_START
+     {State::INITIALIZING, 0},  ///< STA_STOP
+     {State::INITIALIZING, 0},  ///< STA_CONNECT
+     {State::INITIALIZING, 0},  ///< STA_DISCONNECT
+     {State::INITIALIZING, 0},  ///< GOT_IP
+     {State::INITIALIZING, 0}}, ///< LOST_IP
     /* INITIALIZED    */
-    {{State::INITIALIZED, 0},
-     {State::INITIALIZED, 0},
-     {State::INITIALIZED, 0},
-     {State::INITIALIZED, 0},
-     {State::INITIALIZED, 0},
-     {State::INITIALIZED, 0}},
+    {{State::INITIALIZED, 0},  ///< STA_START
+     {State::INITIALIZED, 0},  ///< STA_STOP
+     {State::INITIALIZED, 0},  ///< STA_CONNECT
+     {State::INITIALIZED, 0},  ///< STA_DISCONNECT
+     {State::INITIALIZED, 0},  ///< GOT_IP
+     {State::INITIALIZED, 0}}, ///< LOST_IP
     /* STARTING       */
-    {{State::STARTED, STARTED_BIT},
-     {State::STARTING, 0},
-     {State::STARTING, 0},
-     {State::INITIALIZED, START_FAILED_BIT},
-     {State::STARTING, 0},
-     {State::STARTING, 0}},
+    {{State::STARTED, STARTED_BIT},          ///< STA_START
+     {State::STARTING, 0},                   ///< STA_STOP
+     {State::STARTING, 0},                   ///< STA_CONNECT
+     {State::INITIALIZED, START_FAILED_BIT}, ///< STA_DISCONNECT
+     {State::STARTING, 0},                   ///< GOT_IP
+     {State::STARTING, 0}},                  ///< LOST_IP
     /* STARTED        */
-    {{State::STARTED, 0},
-     {State::STARTED, 0},
-     {State::STARTED, 0},
-     {State::STARTED, 0},
-     {State::STARTED, 0},
-     {State::STARTED, 0}},
+    {{State::STARTED, 0},  ///< STA_START
+     {State::STARTED, 0},  ///< STA_STOP
+     {State::STARTED, 0},  ///< STA_CONNECT
+     {State::STARTED, 0},  ///< STA_DISCONNECT
+     {State::STARTED, 0},  ///< GOT_IP
+     {State::STARTED, 0}}, ///< LOST_IP
     /* CONNECTING     */
-    {{State::CONNECTING, 0},
-     {State::CONNECTING, 0},
-     {State::CONNECTED_NO_IP, 0},
-     {State::WAITING_RECONNECT, 0},
-     {State::CONNECTED_GOT_IP, CONNECTED_BIT},
-     {State::CONNECTING, 0}},
+    {{State::CONNECTING, 0},                   ///< STA_START
+     {State::CONNECTING, 0},                   ///< STA_STOP
+     {State::CONNECTED_NO_IP, 0},              ///< STA_CONNECT
+     {State::WAITING_RECONNECT, 0},            ///< STA_DISCONNECT
+     {State::CONNECTED_GOT_IP, CONNECTED_BIT}, ///< GOT_IP
+     {State::CONNECTING, 0}},                  ///< LOST_IP
     /* CONNECTED_NO_IP*/
-    {{State::CONNECTED_NO_IP, 0},
-     {State::CONNECTED_NO_IP, 0},
-     {State::CONNECTED_NO_IP, 0},
-     {State::WAITING_RECONNECT, 0},
-     {State::CONNECTED_GOT_IP, CONNECTED_BIT},
-     {State::CONNECTED_NO_IP, 0}},
+    {{State::CONNECTED_NO_IP, 0},              //< STA_START
+     {State::CONNECTED_NO_IP, 0},              ///< STA_STOP
+     {State::CONNECTED_NO_IP, 0},              ///< STA_CONNECTED
+     {State::WAITING_RECONNECT, 0},            ///< STA_DISCONNECTED
+     {State::CONNECTED_GOT_IP, CONNECTED_BIT}, ///< GOT_IP
+     {State::CONNECTED_NO_IP, 0}},             ///< LOST_IP
     /* CONNECTED_GOT_IP*/
-    {{State::CONNECTED_GOT_IP, 0},
-     {State::CONNECTED_GOT_IP, 0},
-     {State::CONNECTED_GOT_IP, 0},
-     {State::WAITING_RECONNECT, 0},
-     {State::CONNECTED_GOT_IP, 0},
-     {State::CONNECTED_NO_IP, 0}},
+    {{State::CONNECTED_GOT_IP, 0},  //< STA_START
+     {State::CONNECTED_GOT_IP, 0},  //< STA_STOP
+     {State::CONNECTED_GOT_IP, 0},  //< STA_CONNECTED
+     {State::WAITING_RECONNECT, 0}, //< STA_DISCONNECTED
+     {State::CONNECTED_GOT_IP, 0},  //< GOT_IP
+     {State::CONNECTED_NO_IP, 0}},  //< LOST_IP
     /* DISCONNECTING  */
-    {{State::DISCONNECTING, 0},
-     {State::DISCONNECTING, 0},
-     {State::DISCONNECTING, 0},
-     {State::STARTED, DISCONNECTED_BIT},
-     {State::DISCONNECTING, 0},
-     {State::DISCONNECTING, 0}},
+    {{State::DISCONNECTING, 0},          ///< STA_START
+     {State::DISCONNECTING, 0},          ///< STA_STOP
+     {State::DISCONNECTING, 0},          ///< STA_CONNECTED
+     {State::STARTED, DISCONNECTED_BIT}, ///< STA_DISCONNECTED
+     {State::DISCONNECTING, 0},          ///< GOT_IP
+     {State::DISCONNECTING, 0}},         ///< LOST_IP
     /* WAITING_RECON  */
-    {{State::WAITING_RECONNECT, 0},
-     {State::WAITING_RECONNECT, 0},
-     {State::WAITING_RECONNECT, 0},
-     {State::WAITING_RECONNECT, 0},
-     {State::WAITING_RECONNECT, 0},
-     {State::WAITING_RECONNECT, 0}},
+    {{State::WAITING_RECONNECT, 0},  ///< STA_START
+     {State::WAITING_RECONNECT, 0},  ///< STA_STOP
+     {State::WAITING_RECONNECT, 0},  ///< STA_CONNECTED
+     {State::WAITING_RECONNECT, 0},  ///< STA_DISCONNECTED
+     {State::WAITING_RECONNECT, 0},  ///< GOT_IP
+     {State::WAITING_RECONNECT, 0}}, ///< LOST_IP
     /* ERROR_CRED     */
-    {{State::ERROR_CREDENTIALS, 0},
-     {State::ERROR_CREDENTIALS, 0},
-     {State::ERROR_CREDENTIALS, 0},
-     {State::ERROR_CREDENTIALS, 0},
-     {State::ERROR_CREDENTIALS, 0},
-     {State::ERROR_CREDENTIALS, 0}},
+    {{State::ERROR_CREDENTIALS, 0},  ///< STA_START
+     {State::ERROR_CREDENTIALS, 0},  ///< STA_STOP
+     {State::ERROR_CREDENTIALS, 0},  ///< STA_CONNECTED
+     {State::ERROR_CREDENTIALS, 0},  ///< STA_DISCONNECTED
+     {State::ERROR_CREDENTIALS, 0},  ///< GOT_IP
+     {State::ERROR_CREDENTIALS, 0}}, ///< LOST_IP
     /* STOPPING       */
-    {{State::STOPPING, 0},
-     {State::INITIALIZED, STOPPED_BIT},
-     {State::STOPPING, 0},
-     {State::STOPPING, 0},
-     {State::STOPPING, 0},
-     {State::STOPPING, 0}},
+    {{State::STOPPING, 0},              ///< STA_START
+     {State::INITIALIZED, STOPPED_BIT}, ///< STA_STOP
+     {State::STOPPING, 0},              ///< STA_CONNECTED
+     {State::STOPPING, 0},              ///< STA_DISCONNECTED
+     {State::STOPPING, 0},              ///< GOT_IP
+     {State::STOPPING, 0}},             ///< LOST_IP
 };
 
 WiFiStateMachine::WiFiStateMachine(ITimerHAL &timer_hal)
