@@ -37,6 +37,8 @@ public:
     virtual esp_err_t clear_credentials() = 0;
     virtual esp_err_t factory_reset() = 0;
     virtual bool is_credentials_valid() const = 0;
+
+    virtual TaskHandle_t get_task_handle() const = 0;
 };
 
 } // namespace wifi_manager

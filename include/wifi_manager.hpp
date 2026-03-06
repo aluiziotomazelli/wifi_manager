@@ -5,13 +5,13 @@
 #include <string>
 
 #include "wifi_types.hpp"
+#include "interfaces/i_wifi_bootstrapper.hpp"
 #include "interfaces/i_wifi_config_storage.hpp"
 #include "interfaces/i_wifi_driver_hal.hpp"
 #include "interfaces/i_wifi_manager.hpp"
+#include "interfaces/i_wifi_message_processor.hpp"
 #include "interfaces/i_wifi_state_machine.hpp"
 #include "interfaces/i_wifi_sync_manager.hpp"
-#include "interfaces/i_wifi_bootstrapper.hpp"
-#include "interfaces/i_wifi_message_processor.hpp"
 
 // Forward declaration for test accessor
 class WiFiManagerTestAccessor;
@@ -81,6 +81,8 @@ public:
     esp_err_t factory_reset() override;
     bool is_credentials_valid() const override;
 
+    TaskHandle_t get_task_handle() const override;
+
 private:
     // Internal helper to initialize NVS flash partition
     esp_err_t init_nvs();
@@ -108,7 +110,6 @@ private:
     // --- Private Members ---
     TaskHandle_t task_handle_;              ///< Task handling internal state
     mutable SemaphoreHandle_t state_mutex_; ///< Recursive mutex for thread-safe state access
-
 };
 
 } // namespace wifi_manager
