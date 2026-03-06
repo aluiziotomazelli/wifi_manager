@@ -30,12 +30,12 @@ public:
     esp_err_t init() override;
 
     /**
-     * @brief Save WiFi credentials to the driver and persist validity flag.
+     * @brief Add WiFi credentials to the storage, sync to driver and persist validity flag.
      * @param ssid WiFi SSID.
      * @param password WiFi password.
      * @return ESP_OK on success.
      */
-    esp_err_t save_credentials(const std::string &ssid, const std::string &password) override;
+    esp_err_t add_credentials(const std::string &ssid, const std::string &password) override;
 
     /**
      * @brief Load WiFi credentials from the driver.
@@ -82,6 +82,7 @@ private:
     bool is_valid_;
 
     esp_err_t load_valid_flag();
+    esp_err_t sync_to_driver(const std::string &ssid, const std::string &password);
 };
 
 } // namespace wifi_manager

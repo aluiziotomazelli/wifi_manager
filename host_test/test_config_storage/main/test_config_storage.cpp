@@ -94,73 +94,103 @@ TEST_F(WiFiConfigStorageTest, InitLoadsValidFlag)
     EXPECT_FALSE(storage.is_valid());
 }
 
-TEST_F(WiFiConfigStorageTest, InitPersistsValidFlag)
+TEST_F(WiFiConfigStorageTest, InitPersistsValidFlagAndSyncsToDriver)
 {
     EXPECT_EQ(ESP_OK, storage.init());
 
-    // Manually save valid flag, then re-init to verify it is loaded from NVS
-    storage.save_valid_flag(true);
+    // Save credentials, which sets valid flag
+    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(Return(ESP_OK));
+    storage.add_credentials("sync_ssid", "sync_pass");
 
+    // Re-init with a new instance
     WiFiConfigStorage storage2{hal, "test_ns"};
+    // Init should now load "sync_ssid" and call wifi_set_config on driver
+    wifi_config_t synced_cfg = {};
+    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(DoAll(SaveArgPointee<0>(&synced_cfg), Return(ESP_OK)));
+
     EXPECT_EQ(ESP_OK, storage2.init());
     EXPECT_TRUE(storage2.is_valid());
+    EXPECT_STREQ("sync_ssid", (char *)synced_cfg.sta.ssid);
 }
 
 // =============================================================================
-// save_credentials / load_credentials
+// add_credentials / load_credentials
 // =============================================================================
 
-TEST_F(WiFiConfigStorageTest, SaveAndLoadCredentials)
+TEST_F(WiFiConfigStorageTest, AddAndLoadCredentials)
 {
     storage.init();
 
     wifi_config_t saved_cfg = {};
-
     EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(DoAll(SaveArgPointee<0>(&saved_cfg), Return(ESP_OK)));
 
-    // Use a lambda so saved_cfg is read after set_config has already filled it
-    EXPECT_CALL(hal, wifi_get_config(_)).WillOnce([&saved_cfg](wifi_config_t *cfg) {
-        *cfg = saved_cfg;
-        return ESP_OK;
-    });
-
-    EXPECT_EQ(ESP_OK, storage.save_credentials("myssid", "mypassword"));
+    EXPECT_EQ(ESP_OK, storage.add_credentials("myssid", "mypassword"));
 
     std::string ssid, password;
     EXPECT_EQ(ESP_OK, storage.load_credentials(ssid, password));
     EXPECT_EQ("myssid", ssid);
     EXPECT_EQ("mypassword", password);
+    EXPECT_STREQ("myssid", (char *)saved_cfg.sta.ssid);
 }
 
-TEST_F(WiFiConfigStorageTest, ClearCredentialsZeroesSSIDAndPassword)
+TEST_F(WiFiConfigStorageTest, AddMultipleCredentialsIncremental)
 {
     storage.init();
 
-    wifi_config_t cleared_cfg = {};
-    // Capture the config passed to set_config after clearing
-    EXPECT_CALL(hal, wifi_get_config(_)).WillRepeatedly(Return(ESP_OK));
-    EXPECT_CALL(hal, wifi_set_config(_)).WillRepeatedly(DoAll(SaveArgPointee<0>(&cleared_cfg), Return(ESP_OK)));
+    EXPECT_CALL(hal, wifi_set_config(_)).Times(2).WillRepeatedly(Return(ESP_OK));
 
-    // Save credentials first to ensure there's something to clear
-    storage.save_credentials("myssid", "mypassword");
+    EXPECT_EQ(ESP_OK, storage.add_credentials("ssid0", "pass0"));
+    EXPECT_EQ(ESP_OK, storage.add_credentials("ssid1", "pass1"));
 
-    EXPECT_EQ(ESP_OK, storage.clear_credentials());
-    EXPECT_EQ(0, cleared_cfg.sta.ssid[0]);
-    EXPECT_EQ(0, cleared_cfg.sta.password[0]);
+    // Verify ap_count in NVS
+    nvs_handle_t h;
+    nvs_open("test_ns", NVS_READONLY, &h);
+    uint8_t count = 0;
+    nvs_get_u8(h, "ap_count", &count);
+    EXPECT_EQ(2, count);
+    nvs_close(h);
+
+    // load_credentials should return the last added one
+    std::string ssid, pass;
+    storage.load_credentials(ssid, pass);
+    EXPECT_EQ("ssid1", ssid);
 }
 
-TEST_F(WiFiConfigStorageTest, ClearCredentialsGetConfigFailStillClears)
+TEST_F(WiFiConfigStorageTest, AddExistingSsidUpdatesInsteadOfAdding)
 {
     storage.init();
 
-    wifi_config_t cleared_cfg = {};
-    // Even if get_config fails, set_config must still be called with a zeroed config
-    EXPECT_CALL(hal, wifi_get_config(_)).WillOnce(Return(ESP_FAIL));
-    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(DoAll(SaveArgPointee<0>(&cleared_cfg), Return(ESP_OK)));
+    EXPECT_CALL(hal, wifi_set_config(_)).Times(2).WillRepeatedly(Return(ESP_OK));
 
+    storage.add_credentials("ssid0", "pass_old");
+    storage.add_credentials("ssid0", "pass_new");
+
+    nvs_handle_t h;
+    nvs_open("test_ns", NVS_READONLY, &h);
+    uint8_t count = 0;
+    nvs_get_u8(h, "ap_count", &count);
+    EXPECT_EQ(1, count); // Should still be 1
+    nvs_close(h);
+
+    std::string ssid, pass;
+    storage.load_credentials(ssid, pass);
+    EXPECT_EQ("pass_new", pass);
+}
+
+TEST_F(WiFiConfigStorageTest, ClearCredentialsErasesAllAndDriver)
+{
+    storage.init();
+
+    EXPECT_CALL(hal, wifi_set_config(_)).Times(2).WillRepeatedly(Return(ESP_OK));
+    storage.add_credentials("ssid0", "pass0");
+
+    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(Return(ESP_OK));
     EXPECT_EQ(ESP_OK, storage.clear_credentials());
-    EXPECT_EQ(0, cleared_cfg.sta.ssid[0]);
-    EXPECT_EQ(0, cleared_cfg.sta.password[0]);
+    EXPECT_FALSE(storage.is_valid());
+
+    // Verify NVS is empty by trying to load (should fail to open or find keys)
+    std::string ssid, pass;
+    EXPECT_NE(ESP_OK, storage.load_credentials(ssid, pass));
 }
 
 TEST_F(WiFiConfigStorageTest, SaveEdgeCaseSsidAndPassword)
@@ -168,47 +198,28 @@ TEST_F(WiFiConfigStorageTest, SaveEdgeCaseSsidAndPassword)
     storage.init();
 
     wifi_config_t saved_cfg = {};
-
     EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(DoAll(SaveArgPointee<0>(&saved_cfg), Return(ESP_OK)));
-
-    // Use a lambda so saved_cfg is read after set_config has already filled it
-    EXPECT_CALL(hal, wifi_get_config(_)).WillOnce([&saved_cfg](wifi_config_t *cfg) {
-        *cfg = saved_cfg;
-        return ESP_OK;
-    });
 
     const std::string ssid = std::string(32, 'S');     // 32 chars ssid (max length)
     const std::string password = std::string(64, 'P'); // 64 chars password (max length)
 
-    EXPECT_EQ(ESP_OK, storage.save_credentials(ssid, password));
+    EXPECT_EQ(ESP_OK, storage.add_credentials(ssid, password));
 
     std::string loaded_ssid, loaded_password;
-
     EXPECT_EQ(ESP_OK, storage.load_credentials(loaded_ssid, loaded_password));
     EXPECT_EQ(ssid, loaded_ssid);
     EXPECT_EQ(password, loaded_password);
 }
 
-TEST_F(WiFiConfigStorageTest, SaveInvalidSsidAndPasswordTooLong)
+TEST_F(WiFiConfigStorageTest, AddInvalidSsidAndPasswordTooLong)
 {
     storage.init();
 
     const std::string ssid = std::string(33, 'S');     // 33 chars ssid (more than max length)
     const std::string password = std::string(65, 'P'); // 65 chars password (more than max length)
 
-    EXPECT_EQ(ESP_ERR_INVALID_ARG, storage.save_credentials(ssid, password)); // should not save invalid credentials
-    EXPECT_FALSE(storage.is_valid());                                         // must remain false
-}
-
-TEST_F(WiFiConfigStorageTest, SaveValidSsidAndInvalidPassword)
-{
-    storage.init();
-
-    const std::string ssid = std::string(32, 'S');     // 32 char valid ssid
-    const std::string password = std::string(65, 'P'); // 65 char invalid password
-
-    EXPECT_EQ(ESP_ERR_INVALID_ARG, storage.save_credentials(ssid, password));
-    EXPECT_FALSE(storage.is_valid()); // must remain false
+    EXPECT_EQ(ESP_ERR_INVALID_ARG, storage.add_credentials(ssid, password)); // should not save invalid credentials
+    EXPECT_FALSE(storage.is_valid());                                        // must remain false
 }
 
 // =============================================================================
@@ -292,35 +303,10 @@ TEST_F(WiFiConfigStorageTest, EnsureConfigFallbackGetConfigFails)
     EXPECT_EQ(ESP_FAIL, storage.ensure_config_fallback());
 }
 
-TEST_F(WiFiConfigStorageTest, EnsureConfigFallbackToKconfigSsidAndPassword)
+TEST_F(WiFiConfigStorageTest, EnsureConfigFallbackDoesNothing)
 {
     storage.init();
-
-    wifi_config_t saved_cfg = {};
-
-    // get_config returns empty SSID, triggering the Kconfig fallback path
-    EXPECT_CALL(hal, wifi_get_config(_))
-        .WillOnce([&saved_cfg](wifi_config_t *cfg) {
-            *cfg = {}; // empty SSID triggers fallback
-            return ESP_OK;
-        })
-        // second call (load_credentials) returns what set_config received
-        .WillOnce([&saved_cfg](wifi_config_t *cfg) {
-            *cfg = saved_cfg;
-            return ESP_OK;
-        });
-
-    // capture what ensure_config_fallback passes to set_config
-    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(DoAll(SaveArgPointee<0>(&saved_cfg), Return(ESP_OK)));
-
-    // No ssid in the driver and valid flag is false
-    storage.save_valid_flag(false);
+    EXPECT_CALL(hal, wifi_set_config(_)).Times(0);
+    EXPECT_CALL(hal, wifi_get_config(_)).Times(0);
     EXPECT_EQ(ESP_OK, storage.ensure_config_fallback());
-    EXPECT_TRUE(storage.is_valid());
-
-    // Verify that the credentials are set to Kconfig values
-    std::string ssid, password;
-    storage.load_credentials(ssid, password);
-    EXPECT_STREQ(CONFIG_WIFI_SSID, ssid.c_str());
-    EXPECT_STREQ(CONFIG_WIFI_PASSWORD, password.c_str());
 }

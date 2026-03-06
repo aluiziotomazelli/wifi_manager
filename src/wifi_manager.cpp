@@ -339,7 +339,7 @@ TaskHandle_t WiFiManager::get_task_handle() const
     return task_handle_;
 }
 
-esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::string &password)
+esp_err_t WiFiManager::add_credentials(const std::string &ssid, const std::string &password)
 {
     xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
     if (state_machine_->get_current_state() == State::UNINITIALIZED) {
@@ -351,7 +351,7 @@ esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::strin
         driver_hal_->wifi_disconnect();
     }
 
-    esp_err_t err = storage_->save_credentials(ssid, password);
+    esp_err_t err = storage_->add_credentials(ssid, password);
     xSemaphoreGiveRecursive(state_mutex_);
     return err;
 }

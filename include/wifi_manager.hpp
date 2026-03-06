@@ -75,7 +75,7 @@ public:
 
     State get_state() const override;
 
-    esp_err_t set_credentials(const std::string &ssid, const std::string &password) override;
+    esp_err_t add_credentials(const std::string &ssid, const std::string &password) override;
     esp_err_t get_credentials(std::string &ssid, std::string &password) override;
     esp_err_t clear_credentials() override;
     esp_err_t factory_reset() override;

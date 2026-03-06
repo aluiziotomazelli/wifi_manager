@@ -21,12 +21,12 @@ public:
     virtual esp_err_t init() = 0;
 
     /**
-     * @brief Save WiFi credentials to the driver and persist validity flag.
+     * @brief Add WiFi credentials to the storage, sync to driver and persist validity flag.
      * @param ssid WiFi SSID.
      * @param password WiFi password.
      * @return ESP_OK on success.
      */
-    virtual esp_err_t save_credentials(const std::string &ssid, const std::string &password) = 0;
+    virtual esp_err_t add_credentials(const std::string &ssid, const std::string &password) = 0;
 
     /**
      * @brief Load WiFi credentials from the driver.

@@ -59,34 +59,34 @@ protected:
 // SetCredentials
 // ==========================================================================
 
-TEST_F(WiFiManagerCredentialsTest, SetCredentialsUnitializedStateReturnsError)
+TEST_F(WiFiManagerCredentialsTest, AddCredentialsUnitializedStateReturnsError)
 {
     current_state = State::UNINITIALIZED;                                       // unitialized state
-    EXPECT_EQ(ESP_ERR_INVALID_STATE, manager->set_credentials("ssid", "pass")); // must return error
+    EXPECT_EQ(ESP_ERR_INVALID_STATE, manager->add_credentials("ssid", "pass")); // must return error
 }
 
-TEST_F(WiFiManagerCredentialsTest, SetCredentialsStateMachineActiveCallsDriverDisconnect)
+TEST_F(WiFiManagerCredentialsTest, AddCredentialsStateMachineActiveCallsDriverDisconnect)
 {
     ON_CALL(*state_machine, is_active()).WillByDefault(Return(true)); // state machine is active
     EXPECT_CALL(*driver_hal, wifi_disconnect()).Times(1);             // must call driver disconnect
-    EXPECT_CALL(*storage, save_credentials(_, _)).Times(1);           // must call storage
+    EXPECT_CALL(*storage, add_credentials(_, _)).Times(1);            // must call storage
 
-    EXPECT_EQ(ESP_OK, manager->set_credentials("ssid", "pass"));
+    EXPECT_EQ(ESP_OK, manager->add_credentials("ssid", "pass"));
 }
 
-TEST_F(WiFiManagerCredentialsTest, SetCredentialsStateMachineInactiveDoesNotCallDriverDisconnect)
+TEST_F(WiFiManagerCredentialsTest, AddCredentialsStateMachineInactiveDoesNotCallDriverDisconnect)
 {
     ON_CALL(*state_machine, is_active()).WillByDefault(Return(false)); // state machine is inactive
     EXPECT_CALL(*driver_hal, wifi_disconnect()).Times(0);              // must not call driver disconnect
-    EXPECT_CALL(*storage, save_credentials(_, _)).Times(1);            // must call storage
+    EXPECT_CALL(*storage, add_credentials(_, _)).Times(1);             // must call storage
 
-    EXPECT_EQ(ESP_OK, manager->set_credentials("ssid", "pass"));
+    EXPECT_EQ(ESP_OK, manager->add_credentials("ssid", "pass"));
 }
 
-TEST_F(WiFiManagerCredentialsTest, SetCredentialsSetCredentialsPropagatesError)
+TEST_F(WiFiManagerCredentialsTest, AddCredentialsAddCredentialsPropagatesError)
 {
-    EXPECT_CALL(*storage, save_credentials(_, _)).WillOnce(Return(ESP_FAIL));
-    EXPECT_EQ(ESP_FAIL, manager->set_credentials("ssid", "pass"));
+    EXPECT_CALL(*storage, add_credentials(_, _)).WillOnce(Return(ESP_FAIL));
+    EXPECT_EQ(ESP_FAIL, manager->add_credentials("ssid", "pass"));
 }
 
 // ==========================================================================

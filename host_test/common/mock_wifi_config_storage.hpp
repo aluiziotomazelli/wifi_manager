@@ -10,7 +10,7 @@ class MockWiFiConfigStorage : public IWiFiConfigStorage
 {
 public:
     MOCK_METHOD(esp_err_t, init, (), (override));
-    MOCK_METHOD(esp_err_t, save_credentials, (const std::string &ssid, const std::string &password), (override));
+    MOCK_METHOD(esp_err_t, add_credentials, (const std::string &ssid, const std::string &password), (override));
     MOCK_METHOD(esp_err_t, load_credentials, (std::string & ssid, std::string &password), (override));
     MOCK_METHOD(esp_err_t, clear_credentials, (), (override));
     MOCK_METHOD(esp_err_t, factory_reset, (), (override));

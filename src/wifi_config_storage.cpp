@@ -32,68 +32,128 @@ esp_err_t WiFiConfigStorage::init()
         err = load_valid_flag();
     }
 
+    if (err == ESP_OK && is_valid_) {
+        std::string ssid, pass;
+        err = load_credentials(ssid, pass);
+        if (err == ESP_OK) {
+            err = sync_to_driver(ssid, pass);
+        }
+    }
+
     return err;
 }
 
-esp_err_t WiFiConfigStorage::save_credentials(const std::string &ssid, const std::string &password)
+esp_err_t WiFiConfigStorage::add_credentials(const std::string &ssid, const std::string &password)
 {
-    esp_err_t err;
-
     if (ssid.length() > 32 || password.length() > 64) {
         ESP_LOGE(TAG, "SSID or password too long");
-        err = ESP_ERR_INVALID_ARG;
+        return ESP_ERR_INVALID_ARG;
     }
-    else {
-        wifi_config_t wifi_config = {};
-        size_t ssid_len = ssid.length();
-        memcpy(wifi_config.sta.ssid, ssid.c_str(), ssid_len);
 
-        size_t pass_len = password.length();
-        memcpy(wifi_config.sta.password, password.c_str(), pass_len);
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(nvs_namespace_, NVS_READWRITE, &h);
+    if (err != ESP_OK)
+        return err;
 
-        wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
-        wifi_config.sta.failure_retry_cnt = 0;
-        wifi_config.sta.pmf_cfg.capable = true;
-        wifi_config.sta.pmf_cfg.required = false;
-        wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    uint8_t count = 0;
+    nvs_get_u8(h, "ap_count", &count);
 
-        err = hal_.wifi_set_config(&wifi_config);
-        if (err == ESP_OK) {
-            err = save_valid_flag(true);
+    int found_idx = -1;
+    for (int i = 0; i < count; ++i) {
+        char key[16];
+        snprintf(key, sizeof(key), "ap_%d_ssid", i);
+        char stored_ssid[33] = {0};
+        size_t len = sizeof(stored_ssid);
+        if (nvs_get_str(h, key, stored_ssid, &len) == ESP_OK) {
+            if (ssid == stored_ssid) {
+                found_idx = i;
+                break;
+            }
         }
     }
+
+    int target_idx = found_idx;
+    if (target_idx == -1) {
+        if (count < 10) {
+            target_idx = count;
+            count++;
+            nvs_set_u8(h, "ap_count", count);
+        }
+        else {
+            // Replaces last one if full, or we could implement a circular buffer.
+            // For now, let's just use 9.
+            target_idx = 9;
+        }
+    }
+
+    char ssid_key[16], pass_key[16];
+    snprintf(ssid_key, sizeof(ssid_key), "ap_%d_ssid", target_idx);
+    snprintf(pass_key, sizeof(pass_key), "ap_%d_pass", target_idx);
+
+    nvs_set_str(h, ssid_key, ssid.c_str());
+    nvs_set_str(h, pass_key, password.c_str());
+    nvs_set_u8(h, "ap_cur_idx", (uint8_t)target_idx);
+
+    err = nvs_commit(h);
+    nvs_close(h);
+
+    if (err == ESP_OK) {
+        err = sync_to_driver(ssid, password);
+    }
+
+    if (err == ESP_OK) {
+        err = save_valid_flag(true);
+    }
+
     return err;
 }
 
 esp_err_t WiFiConfigStorage::load_credentials(std::string &ssid, std::string &password)
 {
-    wifi_config_t conf;
-    esp_err_t err = hal_.wifi_get_config(&conf);
-    if (err == ESP_OK) {
-        char ssid_buf[33] = {0};
-        memcpy(ssid_buf, conf.sta.ssid, 32);
-        ssid = ssid_buf;
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(nvs_namespace_, NVS_READONLY, &h);
+    if (err != ESP_OK)
+        return err;
 
+    uint8_t cur_idx = 0;
+    nvs_get_u8(h, "ap_cur_idx", &cur_idx);
+
+    char ssid_key[16], pass_key[16];
+    snprintf(ssid_key, sizeof(ssid_key), "ap_%d_ssid", cur_idx);
+    snprintf(pass_key, sizeof(pass_key), "ap_%d_pass", cur_idx);
+
+    char ssid_buf[33] = {0};
+    size_t ssid_len = sizeof(ssid_buf);
+    err = nvs_get_str(h, ssid_key, ssid_buf, &ssid_len);
+    if (err == ESP_OK) {
+        ssid = ssid_buf;
         char pass_buf[65] = {0};
-        memcpy(pass_buf, conf.sta.password, 64);
-        password = pass_buf;
+        size_t pass_len = sizeof(pass_buf);
+        err = nvs_get_str(h, pass_key, pass_buf, &pass_len);
+        if (err == ESP_OK) {
+            password = pass_buf;
+        }
     }
+
+    nvs_close(h);
     return err;
 }
 
 esp_err_t WiFiConfigStorage::clear_credentials()
 {
-    wifi_config_t saved_config;
-    esp_err_t err = hal_.wifi_get_config(&saved_config);
-    if (err != ESP_OK) {
-        saved_config = {};
-    }
-    saved_config.sta.ssid[0] = 0;
-    saved_config.sta.password[0] = 0;
-
-    err = hal_.wifi_set_config(&saved_config);
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(nvs_namespace_, NVS_READWRITE, &h);
     if (err == ESP_OK) {
-        err = save_valid_flag(false);
+        nvs_erase_all(h);
+        nvs_commit(h);
+        nvs_close(h);
+    }
+
+    wifi_config_t saved_config = {};
+    err = hal_.wifi_set_config(&saved_config);
+
+    if (err == ESP_OK) {
+        is_valid_ = false;
     }
     return err;
 }
@@ -160,47 +220,26 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
 
 esp_err_t WiFiConfigStorage::ensure_config_fallback()
 {
-    static_assert(sizeof(CONFIG_WIFI_SSID) - 1 <= 32, "CONFIG_WIFI_SSID exceeds maximum SSID length of 32 characters");
-    static_assert(
-        sizeof(CONFIG_WIFI_PASSWORD) - 1 <= 64,
-        "CONFIG_WIFI_PASSWORD exceeds maximum password length of 64 characters");
+    // Kconfig fallback removed. Component now relies on dynamic provisioning.
+    return ESP_OK;
+}
 
-    wifi_config_t current_conf;
-    esp_err_t err = hal_.wifi_get_config(&current_conf);
+esp_err_t WiFiConfigStorage::sync_to_driver(const std::string &ssid, const std::string &password)
+{
+    wifi_config_t wifi_config = {};
+    size_t ssid_len = std::min(ssid.length(), (size_t)32);
+    memcpy(wifi_config.sta.ssid, ssid.c_str(), ssid_len);
 
-    if (err == ESP_OK) {
-        if (strlen((char *)current_conf.sta.ssid) == 0) {
-            if (strlen(CONFIG_WIFI_SSID) > 0) {
-                ESP_LOGI(TAG, "No SSID in driver, using Kconfig default: %s", CONFIG_WIFI_SSID);
-                wifi_config_t wifi_config = {};
+    size_t pass_len = std::min(password.length(), (size_t)64);
+    memcpy(wifi_config.sta.password, password.c_str(), pass_len);
 
-                size_t ssid_len = strlen(CONFIG_WIFI_SSID);
-                memcpy(wifi_config.sta.ssid, CONFIG_WIFI_SSID, ssid_len);
+    wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
+    wifi_config.sta.failure_retry_cnt = 0;
+    wifi_config.sta.pmf_cfg.capable = true;
+    wifi_config.sta.pmf_cfg.required = false;
+    wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
 
-                size_t pass_len = strlen(CONFIG_WIFI_PASSWORD);
-                memcpy(wifi_config.sta.password, CONFIG_WIFI_PASSWORD, pass_len);
-
-                wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
-                wifi_config.sta.failure_retry_cnt = 0;
-                wifi_config.sta.pmf_cfg.capable = true;
-                wifi_config.sta.pmf_cfg.required = false;
-                wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-
-                err = hal_.wifi_set_config(&wifi_config);
-                if (err == ESP_OK) {
-                    err = save_valid_flag(true);
-                }
-            }
-        }
-        // If driver has SSID but flag wasn't set, respect driver
-        else {
-            if (!is_valid_) {
-                err = save_valid_flag(true);
-            }
-        }
-    }
-
-    return err;
+    return hal_.wifi_set_config(&wifi_config);
 }
 
 } // namespace wifi_manager
