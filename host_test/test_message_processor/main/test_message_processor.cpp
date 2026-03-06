@@ -23,8 +23,7 @@ protected:
 
     void SetUp() override
     {
-        processor = std::make_unique<WiFiMessageProcessor>(
-            driver_hal, storage, state_machine, sync_manager);
+        processor = std::make_unique<WiFiMessageProcessor>(driver_hal, storage, state_machine, sync_manager);
     }
 };
 
@@ -191,6 +190,17 @@ TEST_F(MessageProcessorTest, HandleDisconnectNormalPathTransitionsToDisconnectin
     processor->process_message(msg, State::CONNECTED_NO_IP);
 }
 
+TEST_F(MessageProcessorTest, HandleDisconnectDriverFailureSetsDisconnectFailedBit)
+{
+    EXPECT_CALL(driver_hal, wifi_disconnect()).WillOnce(Return(ESP_FAIL));
+    EXPECT_CALL(sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(1);
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::COMMAND;
+    msg.cmd = CommandId::DISCONNECT;
+    processor->process_message(msg, State::CONNECTED_NO_IP);
+}
+
 // =============================================================================
 // on_idle_tick
 // =============================================================================
@@ -219,4 +229,191 @@ TEST_F(MessageProcessorTest, OnIdleTickInOtherStatesDoesNothing)
     EXPECT_CALL(driver_hal, wifi_connect()).Times(0);
 
     processor->on_idle_tick(State::STARTED);
+}
+
+// =============================================================================
+// handle_event
+// =============================================================================
+
+TEST_F(MessageProcessorTest, HandleEventDifferentStateCallsResolveEventOnce)
+{
+    // Different state than the one in the event
+    IWiFiStateMachine::EventOutcome neutral = {State::DISCONNECTED, 0};
+    // Should call resolve_event once
+    EXPECT_CALL(state_machine, resolve_event(EventId::STA_DISCONNECTED)).Times(1).WillOnce(Return(neutral));
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    processor->process_message(msg, State::DISCONNECTING);
+}
+
+TEST_F(MessageProcessorTest, HandleEventSetBitOnOutcomeEventCallsSetBits)
+{
+    // Using CONNECTED_BIT to test the bit setting functionality
+    IWiFiStateMachine::EventOutcome outcome = {State::CONNECTED_GOT_IP, CONNECTED_BIT};
+    EXPECT_CALL(state_machine, resolve_event(EventId::GOT_IP)).WillOnce(Return(outcome));
+    EXPECT_CALL(sync_manager, set_bits(CONNECTED_BIT)).Times(1);
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::GOT_IP;
+    processor->process_message(msg, State::CONNECTED_GOT_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventStaDisconnectedInDisconnectingState)
+{
+    // Sets an neutral EventOutcome transition to DISCONNECTING and 0 bits
+    // IWiFiStateMachine::EventOutcome neutral = {State::DISCONNECTING, 0};
+    // handle_event will call resolv_event and returno neutral outcome
+    // EXPECT_CALL(state_machine, resolve_event(EventId::STA_DISCONNECTED)).WillOnce(Return(neutral));
+    // handle_event will set bits DISCONNECTED_BIT | CONNECT_FAILED_BIT
+    EXPECT_CALL(sync_manager, set_bits(DISCONNECTED_BIT | CONNECT_FAILED_BIT)).Times(1);
+
+    // process_message will call handle_event
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    processor->process_message(msg, State::DISCONNECTING);
+}
+
+TEST_F(MessageProcessorTest, HandleEventStaDisconnectedInStoppingState)
+{
+    IWiFiStateMachine::EventOutcome neutral = {State::STOPPING, 0};
+    EXPECT_CALL(state_machine, resolve_event(EventId::STA_DISCONNECTED)).WillOnce(Return(neutral));
+    EXPECT_CALL(sync_manager, set_bits(DISCONNECTED_BIT | CONNECT_FAILED_BIT)).Times(1);
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    processor->process_message(msg, State::STOPPING);
+}
+
+TEST_F(MessageProcessorTest, HandleEventStaDisconnectedWithStateMachineInactive)
+{
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(false));
+
+    IWiFiStateMachine::EventOutcome neutral = {State::DISCONNECTED, 0};
+    EXPECT_CALL(state_machine, resolve_event(EventId::STA_DISCONNECTED)).WillOnce(Return(neutral));
+    EXPECT_CALL(sync_manager, set_bits(DISCONNECTED_BIT | CONNECT_FAILED_BIT)).Times(1);
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    processor->process_message(msg, State::DISCONNECTED);
+}
+
+TEST_F(MessageProcessorTest, HandleEventStaDisconnectedWithReasonAssocLeave)
+{
+    IWiFiStateMachine::EventOutcome neutral = {State::CONNECTED_GOT_IP, 0};
+    EXPECT_CALL(state_machine, resolve_event(EventId::STA_DISCONNECTED)).Times(1).WillOnce(Return(neutral));
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(true));
+
+    EXPECT_CALL(sync_manager, set_bits(DISCONNECTED_BIT | CONNECT_FAILED_BIT)).Times(1);
+    EXPECT_CALL(state_machine, transition_to(State::DISCONNECTED)).Times(1);
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    msg.reason = WIFI_REASON_ASSOC_LEAVE;
+    processor->process_message(msg, State::CONNECTED_GOT_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventDisconnectAuthFailNotSuspectFailure)
+{
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(true));               // state machine is active
+    EXPECT_CALL(state_machine, handle_suspect_failure(_)).WillOnce(Return(false)); // no suspect failure
+    EXPECT_CALL(storage, save_valid_flag(_)).Times(0);                             // should not save valid flag
+    EXPECT_CALL(state_machine, calculate_next_backoff(_)).Times(1);                // should calculate next backoff
+    EXPECT_CALL(sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(1);              // should set bits
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    msg.reason = WIFI_REASON_AUTH_FAIL;
+    processor->process_message(msg, State::CONNECTED_GOT_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventDisconnectAuthFailSuspectFailure)
+{
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(true));              // state machine is active
+    EXPECT_CALL(state_machine, handle_suspect_failure(_)).WillOnce(Return(true)); // suspect failure
+    EXPECT_CALL(storage, save_valid_flag(_)).Times(1);                            // should save valid flag
+    EXPECT_CALL(state_machine, calculate_next_backoff(_)).Times(0);               // should not calculate next backoff
+    EXPECT_CALL(sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(1);             // should set bits
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    msg.reason = WIFI_REASON_AUTH_FAIL;
+    processor->process_message(msg, State::CONNECTED_GOT_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventDisconnectOtherReasonValidCredentials)
+{
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(true));  // state machine is active
+    ON_CALL(storage, is_valid()).WillByDefault(Return(true));         // valid credentials
+    EXPECT_CALL(state_machine, calculate_next_backoff(_)).Times(1);   // should calculate next backoff
+    EXPECT_CALL(sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(1); // should set bits
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    msg.reason = WIFI_REASON_NO_AP_FOUND; // Generic reason not in our failure special cases
+    processor->process_message(msg, State::CONNECTED_GOT_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventDisconnectOtherReasonInvalidCredentials)
+{
+    IWiFiStateMachine::EventOutcome neutral = {State::CONNECTED_GOT_IP, 0};
+    ON_CALL(state_machine, resolve_event(_)).WillByDefault(Return(neutral));
+
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(true));         // state machine is active
+    ON_CALL(storage, is_valid()).WillByDefault(Return(false));               // invalid credentials
+    EXPECT_CALL(state_machine, calculate_next_backoff(_)).Times(0);          // should not calculate next backoff
+    EXPECT_CALL(state_machine, transition_to(State::DISCONNECTED)).Times(1); // should transition to disconnected
+    EXPECT_CALL(sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(1);        // should set bits
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::STA_DISCONNECTED;
+    msg.reason = WIFI_REASON_NO_AP_FOUND; // Generic reason not in our failure special cases
+    processor->process_message(msg, State::CONNECTED_GOT_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventGotIpWithValidCredentials)
+{
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(true)); // state machine is active
+    EXPECT_CALL(state_machine, reset_retries()).Times(1);            // should reset retries
+    ON_CALL(storage, is_valid()).WillByDefault(Return(true));        // valid credentials
+    EXPECT_CALL(storage, save_valid_flag(true)).Times(0);            // should not save valid flag
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::GOT_IP;
+    processor->process_message(msg, State::CONNECTED_NO_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventGotIpWithInvalidCredentials)
+{
+    ON_CALL(state_machine, is_active()).WillByDefault(Return(true)); // state machine is active
+    EXPECT_CALL(state_machine, reset_retries()).Times(1);            // should reset retries
+    ON_CALL(storage, is_valid()).WillByDefault(Return(false));       // invalid credentials
+    EXPECT_CALL(storage, save_valid_flag(true)).Times(1);            // should save valid flag
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::GOT_IP;
+    processor->process_message(msg, State::CONNECTED_NO_IP);
+}
+
+TEST_F(MessageProcessorTest, HandleEventDefaultSwitch)
+{
+    EXPECT_CALL(sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(0); // should not set bits
+    EXPECT_CALL(state_machine, reset_retries()).Times(0);             // should not reset retries
+
+    wifi_manager::Message msg = {};
+    msg.type = MessageType::EVENT;
+    msg.event = EventId::COUNT; // invalid event
+    processor->process_message(msg, State::CONNECTED_NO_IP);
 }
