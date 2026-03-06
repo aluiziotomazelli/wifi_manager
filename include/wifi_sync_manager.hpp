@@ -37,7 +37,7 @@ public:
      * @return ESP_OK if successful.
      */
     esp_err_t post_message(const Message &msg) override;
-    esp_err_t post_message_from_isr(const Message &msg) override;
+    esp_err_t post_message_from_isr(const Message &msg) override; // TODO: is this needed?
 
     /**
      * @brief Clear specific synchronization bits.
@@ -62,26 +62,17 @@ public:
     /**
      * @brief Check if synchronization primitives are initialized.
      */
-    bool is_initialized() const override
-    {
-        return command_queue_ != nullptr && event_group_ != nullptr;
-    }
+    bool is_initialized() const override { return command_queue_ != nullptr && event_group_ != nullptr; }
 
     /**
      * @brief Get the internal queue handle (for task and event handler).
      */
-    QueueHandle_t get_queue() const override
-    {
-        return command_queue_;
-    }
+    QueueHandle_t get_queue() const override { return command_queue_; }
 
     /**
      * @brief Get the internal event group handle.
      */
-    EventGroupHandle_t get_event_group() const override
-    {
-        return event_group_;
-    }
+    EventGroupHandle_t get_event_group() const override { return event_group_; }
 
 private:
     QueueHandle_t command_queue_;
