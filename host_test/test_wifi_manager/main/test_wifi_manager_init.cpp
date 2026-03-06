@@ -3,17 +3,14 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "esp_timer_hal.hpp"
 #include "wifi_manager.hpp"
-#include "wifi_state_machine.hpp"
-#include "wifi_sync_manager.hpp"
 
 #include "mock_wifi_bootstrapper.hpp"
 #include "mock_wifi_config_storage.hpp"
 #include "mock_wifi_driver_hal.hpp"
+#include "mock_wifi_message_processor.hpp"
 #include "mock_wifi_state_machine.hpp"
 #include "mock_wifi_sync_manager.hpp"
-#include "mock_wifi_message_processor.hpp"
 
 using namespace wifi_manager;
 using namespace testing;
