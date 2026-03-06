@@ -17,6 +17,11 @@ class WiFiConfigStorage : public IWiFiConfigStorage
 {
 public:
     /**
+     * @brief Maximum number of WiFi networks that can be stored in NVS.
+     */
+    static constexpr uint8_t MAX_AP_COUNT = 10;
+
+    /**
      * @brief Constructor.
      * @param hal Reference to the driver HAL interface.
      * @param nvs_namespace NVS namespace to use for storage.

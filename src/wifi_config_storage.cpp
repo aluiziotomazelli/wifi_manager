@@ -9,6 +9,8 @@ namespace wifi_manager {
 
 static const char *TAG = "WiFiConfigStorage";
 
+static constexpr uint8_t MAX_AP = 10;
+
 WiFiConfigStorage::WiFiConfigStorage(IWiFiDriverHAL &hal, const char *nvs_namespace)
     : hal_(hal)
     , nvs_namespace_(nvs_namespace)
@@ -74,7 +76,7 @@ esp_err_t WiFiConfigStorage::add_credentials(const std::string &ssid, const std:
 
     int8_t target_idx = found_idx;
     if (target_idx == -1) {
-        if (count < 10) {
+        if (count < MAX_AP) {
             target_idx = count;
             count++;
             nvs_set_u8(h, "ap_count", count);
@@ -221,10 +223,10 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
 esp_err_t WiFiConfigStorage::sync_to_driver(const std::string &ssid, const std::string &password)
 {
     wifi_config_t wifi_config = {};
-    size_t ssid_len = std::min(ssid.length(), (size_t)32);
+    size_t ssid_len = ssid.length();
     memcpy(wifi_config.sta.ssid, ssid.c_str(), ssid_len);
 
-    size_t pass_len = std::min(password.length(), (size_t)64);
+    size_t pass_len = password.length();
     memcpy(wifi_config.sta.password, password.c_str(), pass_len);
 
     wifi_config.sta.scan_method = WIFI_ALL_CHANNEL_SCAN;
