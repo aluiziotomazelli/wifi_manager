@@ -184,7 +184,6 @@ TEST_F(WiFiConfigStorageTest, ClearCredentialsErasesAllAndDriver)
     EXPECT_CALL(hal, wifi_set_config(_)).Times(2).WillRepeatedly(Return(ESP_OK));
     storage.add_credentials("ssid0", "pass0");
 
-    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(Return(ESP_OK));
     EXPECT_EQ(ESP_OK, storage.clear_credentials());
     EXPECT_FALSE(storage.is_valid());
 
@@ -245,7 +244,7 @@ TEST_F(WiFiConfigStorageTest, FactoryResetSetsValidFalse)
 {
     storage.init();
     EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(Return(ESP_OK));
-    storage.save_credentials("ssid", "pass");
+    storage.add_credentials("ssid", "pass");
     EXPECT_TRUE(storage.is_valid());
 
     EXPECT_CALL(hal, wifi_restore()).WillOnce(Return(ESP_OK));
@@ -258,55 +257,4 @@ TEST_F(WiFiConfigStorageTest, FactoryResetSetsValidFalse)
     WiFiConfigStorage storage2{hal, "test_ns"};
     storage2.init();
     EXPECT_FALSE(storage2.is_valid());
-}
-
-// =============================================================================
-// ensure_config_fallback
-// =============================================================================
-
-TEST_F(WiFiConfigStorageTest, EnsureConfigFallbackSsidPresentValidFlagAlreadySet)
-{
-    storage.init();
-
-    wifi_config_t cfg = {};
-    strncpy((char *)cfg.sta.ssid, "existing_ssid", sizeof(cfg.sta.ssid));
-    EXPECT_CALL(hal, wifi_get_config(_)).WillOnce(DoAll(SetArgPointee<0>(cfg), Return(ESP_OK)));
-
-    // Manually set valid so no update is needed
-    storage.save_valid_flag(true);
-
-    // set_config must NOT be called — nothing to update
-    EXPECT_CALL(hal, wifi_set_config(_)).Times(0);
-    EXPECT_EQ(ESP_OK, storage.ensure_config_fallback());
-}
-
-TEST_F(WiFiConfigStorageTest, EnsureConfigFallbackSsidPresentValidFlagNotSet)
-{
-    storage.init();
-
-    wifi_config_t cfg = {};
-    strncpy((char *)cfg.sta.ssid, "existing_ssid", sizeof(cfg.sta.ssid));
-    EXPECT_CALL(hal, wifi_get_config(_)).WillOnce(DoAll(SetArgPointee<0>(cfg), Return(ESP_OK)));
-
-    // Driver has SSID but valid flag was never set — must promote to valid
-    EXPECT_CALL(hal, wifi_set_config(_)).Times(0);
-    EXPECT_EQ(ESP_OK, storage.ensure_config_fallback());
-    EXPECT_TRUE(storage.is_valid());
-}
-
-TEST_F(WiFiConfigStorageTest, EnsureConfigFallbackGetConfigFails)
-{
-    storage.init();
-
-    // If get_config fails, ensure_config_fallback must propagate the error
-    EXPECT_CALL(hal, wifi_get_config(_)).WillOnce(Return(ESP_FAIL));
-    EXPECT_EQ(ESP_FAIL, storage.ensure_config_fallback());
-}
-
-TEST_F(WiFiConfigStorageTest, EnsureConfigFallbackDoesNothing)
-{
-    storage.init();
-    EXPECT_CALL(hal, wifi_set_config(_)).Times(0);
-    EXPECT_CALL(hal, wifi_get_config(_)).Times(0);
-    EXPECT_EQ(ESP_OK, storage.ensure_config_fallback());
 }

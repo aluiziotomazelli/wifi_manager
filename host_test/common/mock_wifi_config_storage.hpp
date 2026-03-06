@@ -16,7 +16,6 @@ public:
     MOCK_METHOD(esp_err_t, factory_reset, (), (override));
     MOCK_METHOD(bool, is_valid, (), (const, override));
     MOCK_METHOD(esp_err_t, save_valid_flag, (bool valid), (override));
-    MOCK_METHOD(esp_err_t, ensure_config_fallback, (), (override));
 };
 
 } // namespace wifi_manager

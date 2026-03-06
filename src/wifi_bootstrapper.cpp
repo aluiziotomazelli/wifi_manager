@@ -85,8 +85,6 @@ esp_err_t WiFiBootstrapper::init(TaskFunction_t task_fn, void *pvParameters, Tas
         return err;
     }
 
-    storage_.ensure_config_fallback();
-
     // Use the injected task function pointer instead of a hardcoded symbol,
     // keeping WiFiBootstrapper decoupled from any concrete WiFiManager type.
     BaseType_t task_created = driver_hal_.task_create(task_fn, "wifi_task", 4096, pvParameters, 5, pxTaskHandle);

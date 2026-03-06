@@ -1,19 +1,17 @@
+#include "host_test_common.hpp"
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 #include "wifi_config_storage.hpp"
 #include "wifi_driver_hal.hpp"
-#include <unity.h>
 #include <string>
-#include "host_test_common.hpp"
+#include <unity.h>
 
 void setUp(void)
 {
     host_test_setup_common_mocks();
 }
 
-void tearDown(void)
-{
-}
+void tearDown(void) {}
 
 TEST_CASE("WiFiConfigStorage basic initialization", "[storage]")
 {
@@ -119,7 +117,6 @@ TEST_CASE("WiFiConfigStorage fallback to Kconfig", "[config_storage]")
     hal.init_wifi();
     storage.init();
 
-    TEST_ASSERT_EQUAL(ESP_OK, storage.ensure_config_fallback());
     TEST_ASSERT_TRUE(storage.is_valid());
 
     std::string loaded_ssid, loaded_pass;

@@ -19,5 +19,5 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(test_sync_manager)
 
 # Include common coverage logic
- #include("../coverage_common.cmake")
- #setup_gtest_coverage(test_sync_manager test_sync_manager.elf)
+ include("../coverage_common.cmake")
+ setup_gtest_coverage(test_sync_manager test_sync_manager.elf)

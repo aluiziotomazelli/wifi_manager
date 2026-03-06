@@ -58,7 +58,7 @@ esp_err_t WiFiConfigStorage::add_credentials(const std::string &ssid, const std:
     uint8_t count = 0;
     nvs_get_u8(h, "ap_count", &count);
 
-    int found_idx = -1;
+    int8_t found_idx = -1;
     for (int i = 0; i < count; ++i) {
         char key[16];
         snprintf(key, sizeof(key), "ap_%d_ssid", i);
@@ -72,7 +72,7 @@ esp_err_t WiFiConfigStorage::add_credentials(const std::string &ssid, const std:
         }
     }
 
-    int target_idx = found_idx;
+    int8_t target_idx = found_idx;
     if (target_idx == -1) {
         if (count < 10) {
             target_idx = count;
@@ -216,12 +216,6 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
         err = ESP_OK;
     }
     return err;
-}
-
-esp_err_t WiFiConfigStorage::ensure_config_fallback()
-{
-    // Kconfig fallback removed. Component now relies on dynamic provisioning.
-    return ESP_OK;
 }
 
 esp_err_t WiFiConfigStorage::sync_to_driver(const std::string &ssid, const std::string &password)

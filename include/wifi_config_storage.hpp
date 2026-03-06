@@ -70,12 +70,6 @@ public:
      */
     esp_err_t save_valid_flag(bool valid) override;
 
-    /**
-     * @brief Ensure driver has a configuration, fallback to Kconfig if empty.
-     * @return ESP_OK on success.
-     */
-    esp_err_t ensure_config_fallback() override;
-
 private:
     IWiFiDriverHAL &hal_;
     const char *nvs_namespace_;

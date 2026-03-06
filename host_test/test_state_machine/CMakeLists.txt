@@ -19,5 +19,5 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(test_state_machine)
 
 # Include common coverage logic
- #include("../coverage_common.cmake")
- #setup_gtest_coverage(test_state_machine test_state_machine.elf)
+ include("../coverage_common.cmake")
+ setup_gtest_coverage(test_state_machine test_state_machine.elf)

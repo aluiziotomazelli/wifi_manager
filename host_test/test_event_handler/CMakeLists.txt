@@ -19,5 +19,5 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(test_event_handler)
 
 # Include common coverage logic
- #include("../coverage_common.cmake")
- #setup_gtest_coverage(test_event_handler test_event_handler.elf)
+ include("../coverage_common.cmake")
+ setup_gtest_coverage(test_event_handler test_event_handler.elf)

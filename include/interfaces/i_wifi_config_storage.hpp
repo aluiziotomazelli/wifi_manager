@@ -60,12 +60,6 @@ public:
      * @return ESP_OK on success.
      */
     virtual esp_err_t save_valid_flag(bool valid) = 0;
-
-    /**
-     * @brief Ensure driver has a configuration, fallback to Kconfig if empty.
-     * @return ESP_OK on success.
-     */
-    virtual esp_err_t ensure_config_fallback() = 0;
 };
 
 } // namespace wifi_manager

@@ -22,6 +22,7 @@ protected:
     NiceMock<MockWiFiConfigStorage> storage;
     NiceMock<MockWiFiSyncManager> sync_manager;
     NiceMock<MockWiFiStateMachine> state_machine;
+    // NiceMock<MockWiFiEventHandler> event_handler;
 
     std::unique_ptr<WiFiBootstrapper> bootstrapper;
 
@@ -49,7 +50,6 @@ protected:
             .WillByDefault(
                 DoAll(SetArgPointee<4>(reinterpret_cast<esp_event_handler_instance_t>(0x456)), Return(ESP_OK)));
 
-        ON_CALL(storage, ensure_config_fallback()).WillByDefault(Return(ESP_OK));
         ON_CALL(driver_hal, task_create(_, _, _, _, _, _)).WillByDefault(Return(pdPASS));
     }
 };
