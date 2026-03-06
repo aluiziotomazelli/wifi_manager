@@ -16,9 +16,9 @@
 #include "wifi_bootstrapper.hpp"
 #include "wifi_config_storage.hpp"
 #include "wifi_driver_hal.hpp"
+#include "wifi_message_processor.hpp"
 #include "wifi_state_machine.hpp"
 #include "wifi_sync_manager.hpp"
-#include "wifi_message_processor.hpp"
 
 static const char *TAG = "WiFiManager";
 
@@ -27,7 +27,7 @@ namespace wifi_manager {
 // =================================================================================================
 // Singleton and Constructor/Destructor
 // =================================================================================================
-
+// LCOV_EXCL_START
 WiFiManager &WiFiManager::get_instance()
 {
     static auto driver_hal = std::make_unique<WiFiDriverHAL>();
@@ -36,7 +36,8 @@ WiFiManager &WiFiManager::get_instance()
     static auto timer_hal = std::make_unique<EspTimerHAL>();
     static auto state_machine = std::make_unique<WiFiStateMachine>(*timer_hal);
     static auto bootstrapper = std::make_unique<WiFiBootstrapper>(*driver_hal, *storage, *sync_manager);
-    static auto processor = std::make_unique<WiFiMessageProcessor>(*driver_hal, *storage, *state_machine, *sync_manager);
+    static auto processor =
+        std::make_unique<WiFiMessageProcessor>(*driver_hal, *storage, *state_machine, *sync_manager);
 
     static WiFiManager instance(
         std::move(driver_hal),
@@ -47,6 +48,7 @@ WiFiManager &WiFiManager::get_instance()
         std::move(processor));
     return instance;
 }
+// LCOV_EXCL_STOP
 
 WiFiManager::WiFiManager(
     std::unique_ptr<IWiFiDriverHAL> driver_hal,
@@ -332,6 +334,11 @@ State WiFiManager::get_state() const
     return state;
 }
 
+TaskHandle_t WiFiManager::get_task_handle() const
+{
+    return task_handle_;
+}
+
 esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::string &password)
 {
     xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
@@ -345,15 +352,6 @@ esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::strin
     }
 
     esp_err_t err = storage_->save_credentials(ssid, password);
-    // if (err == ESP_OK) {
-    //     state_machine_->reset_retries();
-    //     wifi_config_t cfg;
-    //     memset(&cfg, 0, sizeof(cfg));
-    //     strncpy((char *)cfg.sta.ssid, ssid.c_str(), sizeof(cfg.sta.ssid));
-    //     strncpy((char *)cfg.sta.password, password.c_str(), sizeof(cfg.sta.password));
-    //     driver_hal_->wifi_set_config(&cfg);
-    // }
-
     xSemaphoreGiveRecursive(state_mutex_);
     return err;
 }
@@ -397,10 +395,15 @@ bool WiFiManager::is_credentials_valid() const
     return storage_->is_valid();
 }
 
+// TODO: save_valid_flag should be removed? Is used now on WiFiConfigStoraged
 esp_err_t WiFiManager::save_valid_flag(bool valid)
 {
     return storage_->save_valid_flag(valid);
 }
+
+// TODO: WiFiManager only uses MessageType::COMMAND now, MessageType::COMMAND is used on
+// WiFiMessageProcessor::process_message, should be refactored? enum class MessageType : uint8_t and struct Message on
+// wifi_types.hpp
 
 esp_err_t WiFiManager::post_message(const Message &msg, bool is_async)
 {
