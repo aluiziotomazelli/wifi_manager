@@ -4,6 +4,8 @@ idf_component_register(
         "event_stubs.c"
         "test_wifi_manager_init.cpp"
         "test_wifi_manager_commands.cpp"
+        "test_wifi_manager_credentials.cpp"
+        "test_wifi_manager_task.cpp"
     INCLUDE_DIRS
         "."
         "../../common"
