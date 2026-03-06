@@ -8,9 +8,9 @@
 #include "mock_wifi_bootstrapper.hpp"
 #include "mock_wifi_config_storage.hpp"
 #include "mock_wifi_driver_hal.hpp"
+#include "mock_wifi_message_processor.hpp"
 #include "mock_wifi_state_machine.hpp"
 #include "mock_wifi_sync_manager.hpp"
-#include "mock_wifi_message_processor.hpp"
 
 using namespace wifi_manager;
 using namespace testing;
@@ -85,195 +85,6 @@ protected:
         ON_CALL(*state_machine, validate_command(cmd)).WillByDefault(Return(IWiFiStateMachine::Action::ERROR));
     }
 };
-
-// // =============================================================================
-// // process_message — command dispatch
-// // =============================================================================
-
-// TEST_F(WiFiManagerCommandsTest, ProcessMessageStartCallsHandleStart)
-// {
-//     // START command must call wifi_start on the driver
-//     EXPECT_CALL(*driver_hal, wifi_start()).WillOnce(Return(ESP_OK));
-
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::START;
-//     manager->process_message(msg, State::INITIALIZED);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, ProcessMessageStopCallsHandleStop)
-// {
-//     EXPECT_CALL(*driver_hal, wifi_stop()).WillOnce(Return(ESP_OK));
-
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::STOP;
-//     manager->process_message(msg, State::STARTED);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, ProcessMessageConnectCallsHandleConnect)
-// {
-//     EXPECT_CALL(*driver_hal, wifi_connect()).WillOnce(Return(ESP_OK));
-
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::CONNECT;
-//     manager->process_message(msg, State::STARTED);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, ProcessMessageDisconnectCallsHandleDisconnect)
-// {
-//     EXPECT_CALL(*driver_hal, wifi_disconnect()).WillOnce(Return(ESP_OK));
-
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::DISCONNECT;
-//     manager->process_message(msg, State::CONNECTED);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, ProcessMessageExitDoesNotCallDriver)
-// {
-//     // EXIT is handled by wifi_task directly — process_message should ignore it
-//     EXPECT_CALL(*driver_hal, wifi_start()).Times(0);
-//     EXPECT_CALL(*driver_hal, wifi_stop()).Times(0);
-//     EXPECT_CALL(*driver_hal, wifi_connect()).Times(0);
-//     EXPECT_CALL(*driver_hal, wifi_disconnect()).Times(0);
-
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::EXIT;
-//     manager->process_message(msg, State::INITIALIZED);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, ProcessMessageCommandResetsRetries)
-// {
-//     // Any command except EXIT must reset retries
-//     EXPECT_CALL(*state_machine, reset_retries()).Times(1);
-
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::START;
-//     manager->process_message(msg, State::INITIALIZED);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, ProcessMessageExitDoesNotResetRetries)
-// {
-//     EXPECT_CALL(*state_machine, reset_retries()).Times(0);
-
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::EXIT;
-//     manager->process_message(msg, State::INITIALIZED);
-// }
-
-// =============================================================================
-// handle_start
-// =============================================================================
-
-// TEST_F(WiFiManagerCommandsTest, HandleStartTransitionsToStarting)
-// {
-//     ON_CALL(*driver_hal, wifi_start()).WillByDefault(Return(ESP_OK));
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_start(msg, State::INITIALIZED);
-
-//     // On success, state should have passed through STARTING
-//     // (transition_to is called with STARTING before wifi_start)
-//     // Since SaveArg captures the last call, verify via InOrder
-//     InOrder order;
-//     // Rebuild with strict mock to verify order
-// }
-
-// TEST_F(WiFiManagerCommandsTest, HandleStartDriverFailureSetsStartFailedBit)
-// {
-//     // wifi_start fails — must set START_FAILED_BIT and restore state
-//     EXPECT_CALL(*driver_hal, wifi_start()).WillOnce(Return(ESP_FAIL));
-//     EXPECT_CALL(*sync_manager, set_bits(START_FAILED_BIT)).Times(1);
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_start(msg, State::INITIALIZED);
-
-//     // State must be restored to the previous state
-//     EXPECT_EQ(State::INITIALIZED, current_state);
-// }
-
-// =============================================================================
-// handle_stop
-// =============================================================================
-
-// TEST_F(WiFiManagerCommandsTest, HandleStopDriverFailureSetsStopFailedBit)
-// {
-//     EXPECT_CALL(*driver_hal, wifi_stop()).WillOnce(Return(ESP_FAIL));
-//     EXPECT_CALL(*sync_manager, set_bits(STOP_FAILED_BIT)).Times(1);
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_stop(msg, State::STARTED);
-
-//     EXPECT_EQ(State::STARTED, current_state);
-// }
-
-// =============================================================================
-// handle_connect
-// =============================================================================
-
-// TEST_F(WiFiManagerCommandsTest, HandleConnectDriverFailureSetsConnectFailedBit)
-// {
-//     EXPECT_CALL(*driver_hal, wifi_connect()).WillOnce(Return(ESP_FAIL));
-//     EXPECT_CALL(*sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(1);
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_connect(msg, State::STARTED);
-
-//     EXPECT_EQ(State::STARTED, current_state);
-// }
-
-// =============================================================================
-// handle_disconnect
-// =============================================================================
-
-// TEST_F(WiFiManagerCommandsTest, HandleDisconnectFromWaitingReconnectTransitionsToDisconnected)
-// {
-//     // From WAITING_RECONNECT, disconnect must transition to DISCONNECTED immediately
-//     EXPECT_CALL(*sync_manager, set_bits(DISCONNECTED_BIT)).Times(1);
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_disconnect(msg, State::WAITING_RECONNECT);
-
-//     EXPECT_EQ(State::DISCONNECTED, current_state);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, HandleDisconnectFromConnectingTransitionsToDisconnected)
-// {
-//     // From CONNECTING, disconnect must also transition to DISCONNECTED immediately
-//     EXPECT_CALL(*sync_manager, set_bits(DISCONNECTED_BIT)).Times(1);
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_disconnect(msg, State::CONNECTING);
-
-//     EXPECT_EQ(State::DISCONNECTED, current_state);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, HandleDisconnectNormalPathTransitionsToDisconnecting)
-// {
-//     ON_CALL(*driver_hal, wifi_disconnect()).WillByDefault(Return(ESP_OK));
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_disconnect(msg, State::CONNECTED_NO_IP);
-
-//     // Normal path: must transition through DISCONNECTING
-//     EXPECT_EQ(State::DISCONNECTING, current_state);
-// }
-
-// TEST_F(WiFiManagerCommandsTest, HandleDisconnectDriverFailureSetsConnectFailedBit)
-// {
-//     EXPECT_CALL(*driver_hal, wifi_disconnect()).WillOnce(Return(ESP_FAIL));
-//     EXPECT_CALL(*sync_manager, set_bits(CONNECT_FAILED_BIT)).Times(1);
-
-//     wifi_manager::Message msg = {};
-//     manager->handle_disconnect(msg, State::CONNECTED_NO_IP);
-
-//     EXPECT_EQ(State::CONNECTED_NO_IP, current_state);
-// }
 
 // =============================================================================
 // start() async — validate_command guard
@@ -415,28 +226,25 @@ TEST_F(WiFiManagerCommandsTest, DisconnectAsyncPostsDisconnectCommand)
     manager->disconnect();
 }
 
-// // =============================================================================
-// // post_message
-// // =============================================================================
+// =============================================================================
+// post_message()
+// =============================================================================
 
-// TEST_F(WiFiManagerCommandsTest, PostMessageSyncManagerNotInitializedReturnsInvalidState)
-// {
-//     ON_CALL(*sync_manager, is_initialized()).WillByDefault(Return(false));
+TEST_F(WiFiManagerCommandsTest, PostMessageSyncUninitalizedPropagatesError)
+{
+    allow_command(CommandId::STOP);
 
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::START;
+    EXPECT_CALL(*sync_manager, is_initialized()).Times(2).WillOnce(Return(true)).WillOnce(Return(false));
 
-//     EXPECT_EQ(ESP_ERR_INVALID_STATE, manager->post_message(msg, false));
-// }
+    EXPECT_EQ(ESP_ERR_INVALID_STATE, manager->start());
+}
 
-// TEST_F(WiFiManagerCommandsTest, PostMessageQueueFullLogsAndReturnsError)
-// {
-//     ON_CALL(*sync_manager, post_message(_)).WillByDefault(Return(ESP_ERR_NO_MEM));
+TEST_F(WiFiManagerCommandsTest, PostMessageFailsPropagatesError)
+{
+    allow_command(CommandId::START);
 
-//     wifi_manager::Message msg = {};
-//     msg.type = MessageType::COMMAND;
-//     msg.cmd = CommandId::START;
+    EXPECT_CALL(*sync_manager, post_message(Field(&wifi_manager::Message::cmd, CommandId::START)))
+        .WillOnce(Return(ESP_FAIL));
 
-//     EXPECT_EQ(ESP_ERR_NO_MEM, manager->post_message(msg, false));
-// }
+    EXPECT_EQ(ESP_FAIL, manager->start());
+}
