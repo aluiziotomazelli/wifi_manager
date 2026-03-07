@@ -71,7 +71,8 @@ jobs:
           ctest --output-on-failure --output-junit test_results.xml --test-output-size-passed 65536 --test-output-size-failed 65536
 
       - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-results@v2
+        uses: EnricoMi/publish-unit-test-results@c950f6fb443cb5af20a377fd0dfaa78838901040
+        # uses: EnricoMi/publish-unit-test-results@v2
         if: always()        # Publish even with failed tests
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
