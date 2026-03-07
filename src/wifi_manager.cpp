@@ -27,6 +27,7 @@ namespace wifi_manager {
 // =================================================================================================
 // Singleton and Constructor/Destructor
 // =================================================================================================
+
 // LCOV_EXCL_START
 WiFiManager &WiFiManager::get_instance()
 {
@@ -82,7 +83,7 @@ WiFiManager::~WiFiManager()
 }
 
 // =================================================================================================
-// Public API
+// Lifecycle Management
 // =================================================================================================
 
 esp_err_t WiFiManager::init()
@@ -135,6 +136,10 @@ esp_err_t WiFiManager::deinit()
     ESP_LOGI(TAG, "WiFi Manager deinitialized.");
     return ret;
 }
+
+// =================================================================================================
+// Driver Control
+// =================================================================================================
 
 esp_err_t WiFiManager::start(uint32_t timeout_ms)
 {
@@ -231,6 +236,10 @@ esp_err_t WiFiManager::stop()
     return post_message(msg, true);
 }
 
+// =================================================================================================
+// Connection Control
+// =================================================================================================
+
 esp_err_t WiFiManager::connect(uint32_t timeout_ms)
 {
     if (!sync_manager_->is_initialized())
@@ -326,18 +335,9 @@ esp_err_t WiFiManager::disconnect()
     return post_message(msg, true);
 }
 
-State WiFiManager::get_state() const
-{
-    xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
-    State state = state_machine_->get_current_state();
-    xSemaphoreGiveRecursive(state_mutex_);
-    return state;
-}
-
-TaskHandle_t WiFiManager::get_task_handle() const
-{
-    return task_handle_;
-}
+// =================================================================================================
+// Credential Management
+// =================================================================================================
 
 esp_err_t WiFiManager::add_credentials(const std::string &ssid, const std::string &password)
 {
@@ -395,6 +395,27 @@ bool WiFiManager::is_credentials_valid() const
     return storage_->is_valid();
 }
 
+// =================================================================================================
+// Getters and State
+// =================================================================================================
+
+State WiFiManager::get_state() const
+{
+    xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
+    State state = state_machine_->get_current_state();
+    xSemaphoreGiveRecursive(state_mutex_);
+    return state;
+}
+
+TaskHandle_t WiFiManager::get_task_handle() const
+{
+    return task_handle_;
+}
+
+// =================================================================================================
+// Internal Helpers
+// =================================================================================================
+
 // TODO: save_valid_flag should be removed? Is used now on WiFiConfigStoraged
 esp_err_t WiFiManager::save_valid_flag(bool valid)
 {
@@ -415,6 +436,10 @@ esp_err_t WiFiManager::post_message(const Message &msg, bool is_async)
     }
     return err;
 }
+
+// =================================================================================================
+// Background Task
+// =================================================================================================
 
 void WiFiManager::wifi_task(void *pvParameters)
 {

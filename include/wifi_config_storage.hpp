@@ -5,6 +5,11 @@
 
 #include "interfaces/i_wifi_config_storage.hpp"
 
+/**
+ * @file wifi_config_storage.hpp
+ * @brief Concrete implementation of IWiFiConfigStorage using NVS.
+ */
+
 namespace wifi_manager {
 
 class IWiFiDriverHAL;
@@ -22,65 +27,64 @@ public:
     static constexpr uint8_t MAX_AP_COUNT = 10;
 
     /**
-     * @brief Constructor.
+     * @brief Constructor for WiFiConfigStorage.
      * @param hal Reference to the driver HAL interface.
      * @param nvs_namespace NVS namespace to use for storage.
      */
     explicit WiFiConfigStorage(IWiFiDriverHAL &hal, const char *nvs_namespace = "wifi_manager");
 
     /**
-     * @brief Initialize NVS if not already initialized.
-     * @return ESP_OK on success.
+     * @copydoc IWiFiConfigStorage::init()
      */
     esp_err_t init() override;
 
     /**
-     * @brief Add WiFi credentials to the storage, sync to driver and persist validity flag.
-     * @param ssid WiFi SSID.
-     * @param password WiFi password.
-     * @return ESP_OK on success.
+     * @copydoc IWiFiConfigStorage::add_credentials()
      */
     esp_err_t add_credentials(const std::string &ssid, const std::string &password) override;
 
     /**
-     * @brief Load WiFi credentials from the driver.
-     * @param ssid [out] Loaded SSID.
-     * @param password [out] Loaded password.
-     * @return ESP_OK on success.
+     * @copydoc IWiFiConfigStorage::load_credentials()
      */
     esp_err_t load_credentials(std::string &ssid, std::string &password) override;
 
     /**
-     * @brief Clear WiFi credentials from the driver and reset validity flag.
-     * @return ESP_OK on success.
+     * @copydoc IWiFiConfigStorage::clear_credentials()
      */
     esp_err_t clear_credentials() override;
 
     /**
-     * @brief Reset all WiFi settings to factory defaults.
-     * @return ESP_OK on success.
+     * @copydoc IWiFiConfigStorage::factory_reset()
      */
     esp_err_t factory_reset() override;
 
     /**
-     * @brief Check if the stored credentials are considered valid.
-     * @return true if valid.
+     * @copydoc IWiFiConfigStorage::is_valid()
      */
     bool is_valid() const override;
 
     /**
-     * @brief Save the validity flag to storage.
-     * @param valid Validity status.
-     * @return ESP_OK on success.
+     * @copydoc IWiFiConfigStorage::save_valid_flag()
      */
     esp_err_t save_valid_flag(bool valid) override;
 
 private:
-    IWiFiDriverHAL &hal_;
-    const char *nvs_namespace_;
-    bool is_valid_;
+    IWiFiDriverHAL &hal_;       ///< Reference to the WiFi driver HAL
+    const char *nvs_namespace_; ///< NVS namespace for storage
+    bool is_valid_;             ///< Flag indicating if credentials are valid
 
+    /**
+     * @brief Load the validity flag from NVS.
+     * @return ESP_OK on success.
+     */
     esp_err_t load_valid_flag();
+
+    /**
+     * @brief Sync the provided credentials to the WiFi driver.
+     * @param ssid WiFi SSID.
+     * @param password WiFi password.
+     * @return ESP_OK on success.
+     */
     esp_err_t sync_to_driver(const std::string &ssid, const std::string &password);
 };
 

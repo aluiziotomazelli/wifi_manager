@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 # Append extra component directories so IDF can find our local components.
 list(APPEND EXTRA_COMPONENT_DIRS 
-    "../.."                              # The 'ultrasonic_sensor' component being tested
+    "../.."                              # The component being tested
     "../gtest"                           # The GTest wrapper component
     "../common"                          # Mocks
     "$ENV{IDF_PATH}/tools/mocks/esp_wifi"

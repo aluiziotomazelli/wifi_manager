@@ -8,6 +8,11 @@
 
 #include "interfaces/i_wifi_sync_manager.hpp"
 
+/**
+ * @file wifi_sync_manager.hpp
+ * @brief Concrete implementation of IWiFiSyncManager using FreeRTOS.
+ */
+
 namespace wifi_manager {
 
 /**
@@ -17,68 +22,68 @@ namespace wifi_manager {
 class WiFiSyncManager : public IWiFiSyncManager
 {
 public:
+    /**
+     * @brief Construct a new WiFiSyncManager.
+     */
     WiFiSyncManager();
+
     ~WiFiSyncManager() override;
 
     /**
-     * @brief Initialize synchronization primitives.
-     * @return ESP_OK on success, ESP_ERR_NO_MEM on failure.
+     * @copydoc IWiFiSyncManager::init()
      */
     esp_err_t init() override;
 
     /**
-     * @brief Deinitialize and release resources.
+     * @copydoc IWiFiSyncManager::deinit()
      */
     void deinit() override;
 
     /**
-     * @brief Post a message to the internal command queue.
-     * @param msg The message to post.
-     * @return ESP_OK if successful.
+     * @copydoc IWiFiSyncManager::post_message()
      */
     esp_err_t post_message(const Message &msg) override;
-    esp_err_t post_message_from_isr(const Message &msg) override; // TODO: is this needed?
 
     /**
-     * @brief Clear specific synchronization bits.
-     * @param bits_to_clear The bits to clear.
+     * @copydoc IWiFiSyncManager::post_message_from_isr()
+     */
+    esp_err_t post_message_from_isr(const Message &msg) override;
+
+    /**
+     * @copydoc IWiFiSyncManager::clear_bits()
      */
     void clear_bits(uint32_t bits_to_clear) override;
 
     /**
-     * @brief Set specific synchronization bits.
-     * @param bits_to_set The bits to set.
+     * @copydoc IWiFiSyncManager::set_bits()
      */
     void set_bits(uint32_t bits_to_set) override;
 
     /**
-     * @brief Wait for specific synchronization bits to be set.
-     * @param bits_to_wait The bits to wait for.
-     * @param timeout_ms Maximum time to wait in milliseconds.
-     * @return The bits that were actually set at the time of return.
+     * @copydoc IWiFiSyncManager::wait_for_bits()
      */
     uint32_t wait_for_bits(uint32_t bits_to_wait, uint32_t timeout_ms) override;
 
     /**
-     * @brief Check if synchronization primitives are initialized.
+     * @copydoc IWiFiSyncManager::is_initialized()
      */
     bool is_initialized() const override { return command_queue_ != nullptr && event_group_ != nullptr; }
 
     /**
-     * @brief Get the internal queue handle (for task and event handler).
+     * @copydoc IWiFiSyncManager::get_queue()
      */
     QueueHandle_t get_queue() const override { return command_queue_; }
 
     /**
-     * @brief Get the internal event group handle.
+     * @copydoc IWiFiSyncManager::get_event_group()
      */
     EventGroupHandle_t get_event_group() const override { return event_group_; }
 
 private:
-    QueueHandle_t command_queue_;
-    EventGroupHandle_t event_group_;
+    QueueHandle_t command_queue_;    ///< Handle for the message queue
+    EventGroupHandle_t event_group_; ///< Handle for the event group
 
-    static constexpr uint8_t QUEUE_SIZE = 10;
+    static constexpr uint8_t QUEUE_SIZE = 10; ///< Size of the message queue
 };
 
 } // namespace wifi_manager
