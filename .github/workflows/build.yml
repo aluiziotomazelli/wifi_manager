@@ -26,9 +26,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache
-          key: ${{ runner.os }}-ccache-${{ github.ref_name }}-${{ github.sha }}
+          key: ${{ runner.os }}-ccache-esp32-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-ccache-${{ github.ref_name }}-
+            ${{ runner.os }}-ccache-esp32-${{ github.ref_name }}-
+            ${{ runner.os }}-ccache-esp32-
             ${{ runner.os }}-ccache-
 
       - name: Build Firmware

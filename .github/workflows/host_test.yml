@@ -42,9 +42,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .ccache
-          key: ${{ runner.os }}-ccache-${{ github.ref_name }}-${{ github.sha }}
+          key: ${{ runner.os }}-ccache-host-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-ccache-${{ github.ref_name }}-
+            ${{ runner.os }}-ccache-host-${{ github.ref_name }}-
+            ${{ runner.os }}-ccache-host-
             ${{ runner.os }}-ccache-
 
       - name: Build all tests
