@@ -1,0 +1,70 @@
+# .github/workflows/host_test.yml
+name: Host Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  host_tests:
+    permissions:
+      contents: write
+    name: Host Tests
+    runs-on: ubuntu-latest
+    container: espressif/idf:release-v5.5
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y lcov
+
+      - name: Build all tests
+        shell: bash
+        working-directory: host_test
+        run: |
+          . $IDF_PATH/export.sh
+          cmake -B build -S .
+          cmake --build build --target build_all_tests
+          # Clean any old coverage data before running tests
+          cmake --build build --target coverage_clean
+
+      - name: Run tests
+        shell: bash
+        working-directory: host_test/build
+        run: |
+          . $IDF_PATH/export.sh
+          ctest --output-on-failure --output-junit test_results.xml
+
+      - name: Run coverage
+        shell: bash
+        working-directory: host_test/build
+        run: |
+          . $IDF_PATH/export.sh
+          cmake --build . --target unified_coverage
+
+      - name: Deploy coverage to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ env.GITHUB_TOKEN }}
+          publish_dir: ./host_test/coverage
+          publish_branch: gh-pages
+          destination_dir: ./coverage
+          keep_files: false
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-test-results
+          path: host_test/build/test_results.xml
