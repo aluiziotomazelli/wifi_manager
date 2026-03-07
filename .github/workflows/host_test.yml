@@ -13,6 +13,8 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  checks: write
+  pull-requests: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -64,8 +66,17 @@ jobs:
         working-directory: host_test/build
         run: |
           . $IDF_PATH/export.sh
-          ctest --output-on-failure --output-junit test_results.xml
+          # ctest --output-on-failure --output-junit test_results.xml
+          # Execute with 64K to avoid trunked xml
+          ctest --output-on-failure --output-junit test_results.xml --test-output-size-passed 65536 --test-output-size-failed 65536
 
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-results@v2
+        if: always()  # Publish even with failed tests
+        with:
+          files: host_test/build/test_results.xml
+          check_run_annotations: all
+      
       - name: Run coverage
         shell: bash
         working-directory: host_test/build
