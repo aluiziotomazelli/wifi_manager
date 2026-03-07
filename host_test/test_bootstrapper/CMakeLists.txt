@@ -19,6 +19,17 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 project(test_bootstrapper)
 
+
+# Set the patterns to extract from the binary
+set(EXTRACT_PATTERNS_test_bootstrapper "*/wifi_manager/src/wifi_bootstrapper.cpp")
+
+# Set the patterns to remove from the binary
+# set(REMOVE_PATTERNS_test_bootstrapper 
+#     "*/wifi_event_handler.cpp"
+#     "*/wifi_event_handler*"
+#     "*wifi_event_handler*"
+# )
+
 # Include common coverage logic
 include("../coverage_common.cmake")
 setup_gtest_coverage(test_bootstrapper test_bootstrapper.elf)

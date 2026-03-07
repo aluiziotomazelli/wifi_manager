@@ -1,33 +1,79 @@
 # WiFi Manager Host Tests
 
-This folder contains unit and integration tests configured to run directly on a Linux Host, using hardware mocks and the real NVS implementation for persistence.
+This directory contains host-based tests for the component. Host testing allows you to run unit tests on your development machine (Linux) instead of the target microcontroller, enabling faster development cycles and the use of advanced mocking frameworks like Google Mock.
 
-## Structure
+## How to Run Tests
 
-- `common/`: Contains shared utilities, global stubs, and manual mocks for ESP-IDF APIs.
-- `wifi_*/`: Individual test projects for each sub-component.
-- `integration_internal/`: Integration tests for internal FSM logic and queue management.
-- `pytest_host_tests.py`: Automation script for building and running the entire suite.
+### Prerequisites
 
-## How to Run
+- A Linux host machine.
+- ESP-IDF environment set up and sourced.
+- libbsd and libbsd-dev packages for host tests on linux target.
+- lcov and genhtml installed for coverage reporting.
+- The project root directory must be named `wifi_manager`. 
+  - Idf build system uses "Preset Component Variables" that are available for use, but should not be modified: 
+  `COMPONENT_NAME`: Name of the component. Same as the name of the component directory.
 
-Ensure the ESP-IDF environment is loaded (`. export.sh`).
 
-### Run all tests
+### Running tests
+
+The tests are placed in a directories for each subclass of the component. To run a specific test, navigate to the test directory and run the following commands:
+
+1. Navigate to the test project directory:
+   ```bash
+   cd host_test/test_bootstrapper
+   ```
+
+2. Set the target to Linux:
+   ```bash
+   idf.py --preview set-target linux
+   ```
+
+3. Build the test:
+   ```bash
+   idf.py build
+   ```
+
+4. Run the executable:
+   ```bash
+   ./build/test_bootstrapper.elf
+   ```
+
+### Generating Coverage
+
+After running tests in the test directory, you can generate a coverage report for that test by running the following command:
+
 ```bash
-python -m pytest pytest_host_tests.py
+idf.py coverage
 ```
+This will generate a coverage report in the `coverage` directory of the test project, e.g. `host_test/test_bootstrapper/coverage`.
 
-### Run a specific test
-```bash
-cd <test_folder>
-idf.py --preview set-target linux
-idf.py build
-./build/*.elf
-```
 
-## Benefits of this Architecture
-1. **Isolation**: Each suite runs in its own project, avoiding mock conflicts.
-2. **Speed**: Execution in milliseconds without the need to flash hardware.
-3. **Real Persistence**: The use of host `nvs_flash` allows validating if credentials actually survive simulated reboots.
-4. **CI-Ready**: The `pytest` script generates reports compatible with CI tools like GitHub Actions.
+## Unified Testing and Coverage (all tests)
+
+For production readiness or CI, you can run all tests and generate a single unified coverage report.
+
+1. Configure and build all tests:
+   ```bash
+   cd host_test
+   cmake -B build -S .
+   cmake --build build --target build_all_tests
+   ```
+2. Run all tests:
+   ```bash
+   # from the host_test directory 
+   ctest --build-dir build/
+   
+   # or from the build directory
+   cd host_test/build
+   ctest
+   ```
+3. Generate unified coverage report:
+   ```bash
+   # From the host_test directory
+   cmake --build build --target unified_coverage
+   ```
+
+## Shared Coverage Logic
+
+The coverage logic is centralized in `host_test/coverage_common.cmake`. Individual test projects include this file to maintain consistency and reduce duplication.

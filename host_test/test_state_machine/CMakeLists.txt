@@ -18,6 +18,12 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 project(test_state_machine)
 
+# Set the patterns to extract from the binary
+set(EXTRACT_PATTERNS_test_state_machine "*/wifi_manager/src/wifi_state_machine.cpp")
+
+# Set the patterns to remove from the binary
+# set(REMOVE_PATTERNS_test_state_machine "*/wifi_manager/include/*")
+
 # Include common coverage logic
  include("../coverage_common.cmake")
  setup_gtest_coverage(test_state_machine test_state_machine.elf)

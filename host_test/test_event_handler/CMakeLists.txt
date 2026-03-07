@@ -18,6 +18,12 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 project(test_event_handler)
 
+# Set the patterns to extract from the binary
+set(EXTRACT_PATTERNS_test_event_handler "*/wifi_manager/src/wifi_event_handler.cpp")
+
+# Set the patterns to remove from the binary
+# set(REMOVE_PATTERNS_test_event_handler "*/wifi_manager/include/*")
+
 # Include common coverage logic
  include("../coverage_common.cmake")
  setup_gtest_coverage(test_event_handler test_event_handler.elf)

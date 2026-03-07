@@ -19,6 +19,13 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 project(test_config_storage)
 
+
+# Set the patterns to extract from the binary
+set(EXTRACT_PATTERNS_test_config_storage "*/wifi_manager/src/wifi_config_storage.cpp")
+
+# Set the patterns to remove from the binary
+# set(REMOVE_PATTERNS_test_config_storage "*/wifi_manager/include/*")
+
 # Include common coverage logic
  include("../coverage_common.cmake")
  setup_gtest_coverage(test_config_storage test_config_storage.elf)
