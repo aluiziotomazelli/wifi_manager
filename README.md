@@ -3,7 +3,7 @@ A thread-safe WiFi Station manager for ESP-IDF (v5.x).
 
 [![ESP-IDF Build](https://github.com/aluiziotomazelli/wifi_manager/actions/workflows/build.yml/badge.svg)](https://github.com/aluiziotomazelli/wifi_manager/actions/workflows/build.yml)
 [![Host tests](https://github.com/aluiziotomazelli/wifi_manager/actions/workflows/host_test.yml/badge.svg)](https://github.com/aluiziotomazelli/wifi_manager/actions/workflows/host_test.yml)
-[![Coverage Report](https://img.shields.io/badge/coverage-report-blue)](https://aluiziotomazelli.github.io/wifi_manager/index.html)
+[![Coverage Report](https://img.shields.io/badge/coverage-97%25-orange)](https://aluiziotomazelli.github.io/wifi_manager/index.html)
 [![Component Registry](https://components.espressif.com/components/aluiziotomazelli/wifi_manager/badge.svg)](https://components.espressif.com/components/aluiziotomazelli/wifi_manager)
 
 ESP-IDF component available via the official Component Registry.
