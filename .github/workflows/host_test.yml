@@ -20,6 +20,8 @@ concurrency:
   group: "pages"
   cancel-in-progress: false 
 
+
+
 jobs:
   host_tests:
     name: Host Tests
@@ -27,6 +29,8 @@ jobs:
     container: espressif/idf:release-v5.5
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      IDF_CCACHE_ENABLE: 1
 
     steps:
       - name: Checkout repository
@@ -37,9 +41,10 @@ jobs:
       - name: Setup Cache for ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-ccache-${{ github.ref_name }}
+          path: .ccache
+          key: ${{ runner.os }}-ccache-${{ github.ref_name }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-ccache-${{ github.ref_name }}-
             ${{ runner.os }}-ccache-
 
       - name: Build all tests
@@ -47,7 +52,7 @@ jobs:
         working-directory: host_test
         run: |
           . $IDF_PATH/export.sh
-          export IDF_CCACHE_ENABLE=1
+          mkdir -p ../.ccache
           cmake -B build -S .
           cmake --build build --target build_all_tests
           # Clean any old coverage data before running tests
