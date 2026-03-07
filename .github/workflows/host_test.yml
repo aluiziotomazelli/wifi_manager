@@ -47,6 +47,8 @@ jobs:
         run: |
           . $IDF_PATH/export.sh
           cmake --build . --target unified_coverage
+          # empty file to prevent jekyll from processing the directory
+          touch ./coverage/.nojekyll
 
       - name: Deploy coverage to GitHub Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
