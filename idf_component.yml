@@ -26,6 +26,10 @@ dependencies:
 
 files:
   use_gitignore: true
+  exclude:
+    - "host_test/"
+    - "test_apps/"
+    - "legacy_*/"
   
 examples:
   - path: "examples/basic_usage"
