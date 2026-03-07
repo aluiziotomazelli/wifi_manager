@@ -1,6 +1,8 @@
-#include <stdio.h>
+#include "wifi_manager.hpp"
 
 extern "C" void app_main(void)
 {
-    printf("Hello World\n");
+    using namespace wifi_manager;
+    auto &wm = WiFiManager::get_instance();
+    wm.init();
 }
