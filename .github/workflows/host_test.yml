@@ -23,11 +23,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install dependencies
-        run: |
-          apt-get update
-          apt-get install -y lcov
-
       - name: Build all tests
         shell: bash
         working-directory: host_test
