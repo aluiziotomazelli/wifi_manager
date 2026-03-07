@@ -62,6 +62,26 @@ protected:
     void setup_successful_init() { ON_CALL(*bootstrapper, init(_, _, _)).WillByDefault(Return(ESP_OK)); }
 };
 
+TEST_F(WiFiManagerInitTest, FailTestToCaptureXmlResult)
+{
+    // GTEST_SKIP();
+    EXPECT_TRUE(false);
+}
+
+TEST_F(WiFiManagerInitTest, FailTestToMarkTheCode)
+{
+    setup_successful_init();
+
+    // First init succeeds
+    ASSERT_EQ(ESP_FAIL, manager->init());
+    ASSERT_EQ(State::INITIALIZED, manager->get_state());
+
+    // Second init must return ESP_OK immediately without calling bootstrapper again
+    EXPECT_CALL(*bootstrapper, init(_, _, _)).Times(0);
+
+    EXPECT_EQ(ESP_OK, manager->init());
+}
+
 TEST_F(WiFiManagerInitTest, InitAlreadyInitializedReturnsOkWithoutCallingBootstrapper)
 {
     setup_successful_init();
