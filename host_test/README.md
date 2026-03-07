@@ -51,28 +51,39 @@ This will generate a coverage report in the `coverage` directory of the test pro
 
 ## Unified Testing and Coverage (all tests)
 
-For production readiness or CI, you can run all tests and generate a single unified coverage report.
+For running all tests at once and generating a single unified coverage report for the `wifi_manager` component:
 
-1. Configure and build all tests:
+1. **Configure the project**:
    ```bash
    cd host_test
-   cmake -B build -S .
-   cmake --build build --target build_all_tests
+   mkdir -p build && cd build
+   cmake ..
    ```
-2. Run all tests:
+
+2. **Build all test projects**:
    ```bash
-   # from the host_test directory 
-   ctest --build-dir build/
-   
-   # or from the build directory
-   cd host_test/build
-   ctest
+   make build_all_tests
    ```
-3. Generate unified coverage report:
+
+3. **Clean old coverage data and run tests**:
    ```bash
-   # From the host_test directory
-   cmake --build build --target unified_coverage
+   make coverage_clean
+   ctest --output-on-failure
    ```
+
+4. **Generate the unified coverage report**:
+   ```bash
+   make unified_coverage
+   ```
+   The report will be available at `host_test/coverage/index.html`.
+
+## CI/CD Integration
+
+This project includes a GitHub Actions workflow (`.github/workflows/host_test.yml`) that automatically:
+- Installs necessary dependencies (`lcov`).
+- Builds and runs all host tests on every push/PR to `main`.
+- Generates the unified coverage report.
+- Deploys the coverage report to GitHub Pages (only on pushes to `main`).
 
 ## Shared Coverage Logic
 

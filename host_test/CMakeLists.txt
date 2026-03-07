@@ -24,8 +24,6 @@ set(UNIFIED_COVERAGE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/coverage")
 
 # This target aggregates coverage data (.gcda files) from all test build directories
 add_custom_target(unified_coverage
-    COMMAND find . -name "*.gcda" -delete
-    COMMAND ${CMAKE_COMMAND} -E rm -rf ${UNIFIED_COVERAGE_DIR}
     COMMAND ${LCOV_PATH} --capture --directory .. --output-file unified_coverage.info --rc branch_coverage=1 --rc geninfo_unexecuted_blocks=1 --ignore-errors mismatch,inconsistent
     # COMMAND ${LCOV_PATH} --extract unified_coverage.info "*/wifi_manager/src/*" "*/wifi_manager/include/*" --output-file unified_coverage_filtered.info --rc branch_coverage=1 --ignore-errors mismatch,inconsistent,unused,empty
     COMMAND ${LCOV_PATH} --extract unified_coverage.info "*/wifi_manager/src/*" --output-file unified_coverage_filtered.info --rc branch_coverage=1 --ignore-errors mismatch,inconsistent,unused,empty
@@ -34,6 +32,14 @@ add_custom_target(unified_coverage
     COMMAND ${LCOV_PATH} --list unified_coverage_filtered.info --rc branch_coverage=1 --ignore-errors mismatch,inconsistent,unused,empty
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Generating unified coverage report from all host tests"
+)
+
+# Added cleanup target to manually clear previous results if needed
+add_custom_target(coverage_clean
+    COMMAND find . -name "*.gcda" -delete
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${UNIFIED_COVERAGE_DIR}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Cleaning up coverage data"
 )
 
 # Helper target to build all tests at once (requires idf.py to be in your PATH)
