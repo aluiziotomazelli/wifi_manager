@@ -72,8 +72,9 @@ jobs:
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-results@v2
-        if: always()  # Publish even with failed tests
+        if: always()        # Publish even with failed tests
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           files: host_test/build/test_results.xml
           check_run_annotations: all
       
