@@ -11,15 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-02-10
 
 ### Refactor
-- Unified command and event handling into a serialized message queue.  
 - **Componentization**: Split `WiFiManager` into specialized single-responsibility classes:
+    - `WiFiBootstrapper`: Handles initialization and configuration of the WiFiManager.
     - `WiFiConfigStorage`: Handles NVS persistence and credential management.
-    - `WiFiStateMachine`: Pure logic component for state transitions and command validation.
-    - `WiFiDriverHAL`: Abstraction layer for ESP-IDF WiFi/Netif drivers, enabling easier testing/mocking.
     - `WiFiEventHandler`: Translates system events into internal signals.
+    - `WiFiMessageProcessor`: Handles message processing, state transitions, commands and their validation.
+    - `WiFiStateMachine`: Pure logic component for state transitions and command validation.
     - `WiFiSyncManager`: Centralizes synchronization (queues and event groups).
-- **Clean Architecture**: Removed all `#ifdef UNIT_TEST` blocks and helper methods from production code. Testing is now done via `WiFiManagerTestAccessor`.
+    - `WiFiManager`: Public API interface for WiFiManager.
 
+- **Google Test**: Added Google Test and Google Mock as a dependency for unit testing. WiFiManager has a test constructor with dependencies injection for easier testing.
 
 ### Features
  - New declarative FSM (Finite State Machine) architecture using transition matrices.  
@@ -32,9 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - **Optimized Connection Speed**: Set driver's internal failure retries to zero, giving the WiFiManager FSM immediate control over reconnection logic.
 
 ### Testing
-- **Isolated Test Apps**: Created dedicated test applications for each new component (`test_apps/wifi_config_storage`, `test_apps/wifi_state_machine`, etc.).
-- **Integration Tests**: Added `test_apps/integration_internal` for white-box testing and `test_apps/integration_public` for API black-box testing.
-- **Improved Coverage**: Added deterministic tests for queue behavior and race conditions.
+- **Isolated Test Apps**: Created dedicated test applications for each new component (`host_test/test_config_storage`, `host_test/test_state_machine`, etc.).
+- **Integrated tests with CTest**: All test can be run at once with `ctest`. Look at [`host_test/README.md`](host_test/README.md) for more details.
 
 ## [1.0.0] - 2026-02-02
 
