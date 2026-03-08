@@ -27,16 +27,6 @@ graph TD
     EV["ESP-IDF Event Loop"] --> EH["WiFiEventHandler\n(event translation)"]
     EH --> SY
 
-    style App fill:#f5f5f5,stroke:#666
-    style WM  fill:#dae8fc,stroke:#4a7ab5, color:#000000
-    style BS  fill:#d5e8d4,stroke:#5a9e52, color:#000000
-    style MP  fill:#d5e8d4,stroke:#5a9e52, color:#000000
-    style SM  fill:#fff2cc,stroke:#c9a800, color:#000000
-    style SY  fill:#fff2cc,stroke:#c9a800, color:#000000
-    style ST  fill:#fff2cc,stroke:#c9a800, color:#000000
-    style HAL fill:#f8cecc,stroke:#c0392b, color:#000000
-    style EH  fill:#e1d5e7,stroke:#7d5a9a, color:#000000
-    style EV  fill:#f5f5f5,stroke:#666, color:#000000
 ```
 
 ---
