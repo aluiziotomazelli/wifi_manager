@@ -54,6 +54,36 @@ protected:
     }
 };
 
+// The IDF WiFi initialization sequence is order-dependent:
+// netif_init() must precede wifi_init()
+// event_loop must exist before registering handlers
+// wifi_init() must precede wifi_set_mode()
+// wifi_init() must precede wifi_set_config() - internally called by add_credentials()
+TEST_F(WiFiBootstrapperTest, InitCallsCorrectIdfWifiInitOrder)
+{
+    using ::testing::InSequence;
+    InSequence seq;
+
+    EXPECT_CALL(storage, init()).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(driver_hal, netif_init()).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(driver_hal, event_loop_create_default()).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(driver_hal, netif_get_handle_from_ifkey(_)).Times(1).WillOnce(Return(nullptr));
+    EXPECT_CALL(driver_hal, netif_create_default_wifi_sta())
+        .Times(1)
+        .WillOnce(Return(reinterpret_cast<esp_netif_t *>(0x1)));
+    EXPECT_CALL(driver_hal, wifi_init(_)).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(driver_hal, wifi_set_mode(_)).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(storage, is_valid()).Times(1).WillOnce(Return(true));
+    EXPECT_CALL(storage, load_credentials(_, _)).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(storage, add_credentials(_, _)).Times(1);
+    EXPECT_CALL(sync_manager, init()).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(driver_hal, event_handler_instance_register(WIFI_EVENT, _, _, _, _)).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(driver_hal, event_handler_instance_register(IP_EVENT, _, _, _, _)).Times(1).WillOnce(Return(ESP_OK));
+    EXPECT_CALL(driver_hal, task_create(_, _, _, _, _, _)).Times(1).WillOnce(Return(pdPASS));
+
+    EXPECT_EQ(ESP_OK, bootstrapper->init(dummy_task, nullptr, &task_handle));
+}
+
 TEST_F(WiFiBootstrapperTest, InitSuccess)
 {
     setup_successful_init();
