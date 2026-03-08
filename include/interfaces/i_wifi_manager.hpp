@@ -182,6 +182,12 @@ public:
     virtual esp_err_t add_credentials(const std::string &ssid, const std::string &password) = 0;
 
     /**
+     * @brief Alias for add_credentials.
+     * @deprecated Use add_credentials(ssid, password) instead.
+     */
+    virtual esp_err_t set_credentials(const std::string &ssid, const std::string &password) = 0;
+
+    /**
      * @brief Retrieve the currently stored WiFi credentials from persistent storage.
      *
      * @param[out] ssid String to store the retrieved SSID.

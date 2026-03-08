@@ -356,6 +356,11 @@ esp_err_t WiFiManager::add_credentials(const std::string &ssid, const std::strin
     return err;
 }
 
+esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::string &password)
+{
+    return add_credentials(ssid, password);
+}
+
 esp_err_t WiFiManager::get_credentials(std::string &ssid, std::string &password)
 {
     return storage_->load_credentials(ssid, password);

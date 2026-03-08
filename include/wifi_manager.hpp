@@ -130,6 +130,11 @@ public:
     esp_err_t add_credentials(const std::string &ssid, const std::string &password) override;
 
     /**
+     * @copydoc IWiFiManager::set_credentials()
+     */
+    esp_err_t set_credentials(const std::string &ssid, const std::string &password) override;
+
+    /**
      * @copydoc IWiFiManager::get_credentials()
      */
     esp_err_t get_credentials(std::string &ssid, std::string &password) override;
@@ -190,7 +195,7 @@ private:
     std::unique_ptr<IWiFiStateMachine> state_machine_; ///< Pointer to state machine
     std::unique_ptr<IWiFiDriverHAL> driver_hal_;       ///< Pointer to driver HAL
     std::unique_ptr<IWiFiSyncManager> sync_manager_;   ///< Pointer to sync manager
-    std::unique_ptr<IWiFiBootstrapper> bootstrapper_;   ///< Pointer to bootstrapper
+    std::unique_ptr<IWiFiBootstrapper> bootstrapper_;  ///< Pointer to bootstrapper
     std::unique_ptr<IWiFiMessageProcessor> processor_; ///< Pointer to message processor
 
     // --- Private Members ---
