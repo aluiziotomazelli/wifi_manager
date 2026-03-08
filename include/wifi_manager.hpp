@@ -161,19 +161,6 @@ public:
 
 private:
     /**
-     * @brief Internal helper to initialize NVS flash partition.
-     * @return ESP_OK on success.
-     */
-    esp_err_t init_nvs();
-
-    /**
-     * @brief Helper to persist validity flag.
-     * @param valid Validity status.
-     * @return ESP_OK on success.
-     */
-    esp_err_t save_valid_flag(bool valid);
-
-    /**
      * @brief Main FreeRTOS task loop that executes driver operations.
      * @param pvParameters Pointer to WiFiManager instance.
      */

@@ -392,12 +392,10 @@ esp_err_t WiFiManager::factory_reset()
         xSemaphoreGiveRecursive(state_mutex_);
         return ESP_ERR_INVALID_STATE;
     }
-    esp_err_t err = stop(3000);
-    if (err == ESP_OK) {
-        err = storage_->factory_reset();
-        state_machine_->reset_retries();
-        state_machine_->transition_to(State::INITIALIZED);
-    }
+    stop(3000);
+    esp_err_t err = storage_->factory_reset();
+    state_machine_->reset_retries();
+    state_machine_->transition_to(State::INITIALIZED);
     xSemaphoreGiveRecursive(state_mutex_);
     return err;
 }
@@ -428,16 +426,9 @@ TaskHandle_t WiFiManager::get_task_handle() const
 // Internal Helpers
 // =================================================================================================
 
-// TODO: save_valid_flag should be removed? Is used now on WiFiConfigStoraged
-esp_err_t WiFiManager::save_valid_flag(bool valid)
-{
-    return storage_->save_valid_flag(valid);
-}
-
 // TODO: WiFiManager only uses MessageType::COMMAND now, MessageType::COMMAND is used on
 // WiFiMessageProcessor::process_message, should be refactored? enum class MessageType : uint8_t and struct Message on
 // wifi_types.hpp
-
 esp_err_t WiFiManager::post_message(const Message &msg, bool is_async)
 {
     if (!sync_manager_->is_initialized())
