@@ -2,7 +2,7 @@
 version: "1.1.0"
 description: "A robust, thread-safe WiFi Station manager for ESP-IDF."
 maintainers:
-  - "aluiziotomazelli"
+  - "Aluizio Tomazelli <aluiziotomazelli@gmail.com>"
   
 
 license: "MIT"
@@ -19,7 +19,6 @@ targets:
   - esp32
   - esp32s3
   - esp32c3
-  - linux
 
 dependencies:
   idf: ">=5.0"
@@ -27,13 +26,12 @@ dependencies:
 files:
   use_gitignore: true
   exclude:
-    - "host_test/"
-    - "test_apps/"
-    - "legacy_*/"
-  
+    - "host_test/**/*"
+    - "test_apps/**/*"
+    - "legacy_*/**/*"
+
 examples:
   - path: "examples/basic_usage"
-
 
 url: "https://github.com/aluiziotomazelli/wifi_manager"
 repository: "https://github.com/aluiziotomazelli/wifi_manager"
