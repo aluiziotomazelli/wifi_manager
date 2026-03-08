@@ -37,7 +37,12 @@ esp_err_t WiFiConfigStorage::init()
     if (err == ESP_OK && is_valid_) {
         std::string ssid, pass;
         err = load_credentials(ssid, pass);
-        if (err == ESP_OK) {
+        if (err == ESP_ERR_NOT_FOUND) {
+            ESP_LOGW(TAG, "Credentials not found, assuming invalid");
+            is_valid_ = false;
+            err = ESP_OK;
+        }
+        else if (err == ESP_OK) {
             err = sync_to_driver(ssid, pass);
         }
     }
@@ -112,10 +117,15 @@ esp_err_t WiFiConfigStorage::add_credentials(const std::string &ssid, const std:
 
 esp_err_t WiFiConfigStorage::load_credentials(std::string &ssid, std::string &password)
 {
+    ESP_LOGD(TAG, "Loading credentials");
     nvs_handle_t h;
     esp_err_t err = nvs_open(nvs_namespace_, NVS_READONLY, &h);
-    if (err != ESP_OK)
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    else if (err != ESP_OK) {
         return err;
+    }
 
     uint8_t cur_idx = 0;
     nvs_get_u8(h, "ap_cur_idx", &cur_idx);
@@ -127,7 +137,10 @@ esp_err_t WiFiConfigStorage::load_credentials(std::string &ssid, std::string &pa
     char ssid_buf[33] = {0};
     size_t ssid_len = sizeof(ssid_buf);
     err = nvs_get_str(h, ssid_key, ssid_buf, &ssid_len);
-    if (err == ESP_OK) {
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        err = ESP_ERR_NOT_FOUND;
+    }
+    else if (err == ESP_OK) {
         ssid = ssid_buf;
         char pass_buf[65] = {0};
         size_t pass_len = sizeof(pass_buf);
@@ -206,16 +219,18 @@ esp_err_t WiFiConfigStorage::load_valid_flag()
 {
     nvs_handle_t h;
     esp_err_t err = nvs_open(nvs_namespace_, NVS_READONLY, &h);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        ESP_LOGD(TAG, "NVS partition not found, assuming invalid");
+        is_valid_ = false;
+        return ESP_OK; // first execution, namespace doesn't exist yet
+    }
     if (err == ESP_OK) {
         uint8_t valid = 0;
         if (nvs_get_u8(h, "valid", &valid) == ESP_OK) {
+            ESP_LOGD(TAG, "NVS partition found, assuming valid");
             is_valid_ = (valid != 0);
         }
         nvs_close(h);
-    }
-    else if (err == ESP_ERR_NVS_NOT_FOUND) {
-        is_valid_ = false;
-        err = ESP_OK;
     }
     return err;
 }
