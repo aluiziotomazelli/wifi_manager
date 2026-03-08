@@ -127,6 +127,7 @@ public:
      *     - ESP_OK: Command successfully queued.
      *     - ESP_ERR_INVALID_STATE: Manager not initialized or in an invalid state.
      *     - ESP_FAIL: Internal command queue is full.
+     *     - ESP_ERR_WIFI_PASSWORD: no valid credentials stored.
      */
     virtual esp_err_t connect() = 0;
 
@@ -142,6 +143,7 @@ public:
      *     - ESP_ERR_INVALID_STATE: Manager not initialized or WiFi not connected.
      *     - ESP_ERR_TIMEOUT: Operation timed out.
      *     - ESP_FAIL: Internal command queue error or driver failure.
+     *     - ESP_ERR_WIFI_PASSWORD: no valid credentials stored.
      */
     virtual esp_err_t disconnect(uint32_t timeout_ms) = 0;
 

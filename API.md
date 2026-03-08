@@ -82,6 +82,7 @@ Synchronously connect to the Access Point using stored credentials. Blocks until
 - `ESP_ERR_INVALID_STATE`: Manager not initialized, WiFi not started, or in an invalid state.
 - `ESP_ERR_TIMEOUT`: Operation timed out before obtaining an IP.
 - `ESP_FAIL`: Internal command queue error or connection failure.
+- `ESP_ERR_WIFI_PASSWORD`: no valid credentials stored.
 
 #### `connect()`
 Asynchronously connect to the Access Point using stored credentials. Queues a connect command to the background task and returns immediately.
@@ -90,6 +91,7 @@ Asynchronously connect to the Access Point using stored credentials. Queues a co
 - `ESP_OK`: Command successfully queued.
 - `ESP_ERR_INVALID_STATE`: Manager not initialized or in an invalid state.
 - `ESP_FAIL`: Internal command queue is full.
+- `ESP_ERR_WIFI_PASSWORD`: no valid credentials stored.
 
 #### `disconnect(uint32_t timeout_ms)`
 Synchronously disconnects from the current Access Point. Blocks until the disconnection is complete or the timeout occurs.
