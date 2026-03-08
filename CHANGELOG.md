@@ -8,58 +8,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [1.1.0] - 2026-02-10
+# Changelog
 
-### Refactor
-- **Componentization**: Split `WiFiManager` into specialized single-responsibility classes:
-    - `WiFiBootstrapper`: Handles initialization and configuration of the WiFiManager.
-    - `WiFiConfigStorage`: Handles NVS persistence and credential management.
-    - `WiFiEventHandler`: Translates system events into internal signals.
-    - `WiFiMessageProcessor`: Handles message processing, state transitions, commands and their validation.
-    - `WiFiStateMachine`: Pure logic component for state transitions and command validation.
-    - `WiFiSyncManager`: Centralizes synchronization (queues and event groups).
-    - `WiFiManager`: Public API interface for WiFiManager.
+All notable changes to this project will be documented in this file.
 
-- **Google Test**: Added Google Test and Google Mock as a dependency for unit testing. WiFiManager has a test constructor with dependencies injection for easier testing.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### Features
- - New declarative FSM (Finite State Machine) architecture using transition matrices.  
- - **Dynamic Reconnection Strategy**: Implemented RSSI-aware retry limits to distinguish between poor signal and wrong credentials.
- 
-### Enhancements
- - Improved connection robustness with signal quality (RSSI) awareness.  
- - Implemented exponential backoff for reconnection attempts.  
- - **Enhanced Error Handling**: Handshake and authentication failures are now treated as "suspect", allowing more retries in weak signal conditions before invalidating credentials.
- - **Optimized Connection Speed**: Set driver's internal failure retries to zero, giving the WiFiManager FSM immediate control over reconnection logic.
+## [1.1.0] - 2026-03-07
 
-### Testing
-- **Isolated Test Apps**: Created dedicated test applications for each new component (`host_test/test_config_storage`, `host_test/test_state_machine`, etc.).
-- **Integrated tests with CTest**: All test can be run at once with `ctest`. Look at [`host_test/README.md`](host_test/README.md) for more details.
+### Architecture
+
+The core motivation for this release was testability. The original `WiFiManager` was a monolith — init, event handling, command dispatch, NVS, and driver calls all lived in one class with no seams for unit testing. The refactor introduced single-responsibility components connected through interfaces, enabling each piece to be tested in isolation with mocked collaborators.
+
+Two extractions drove most of the improvement:
+
+- **`WiFiBootstrapper`**: Init and deinit were ~80 lines of sequenced `esp_netif`/`esp_event`/`esp_wifi` calls inside `WiFiManager`. Extracting them gave the sequence a clear boundary and made `WiFiManager::init()` three lines. The bootstrapper accepts `TaskFunction_t` as a parameter to avoid a circular dependency back to `WiFiManager`.
+
+- **`WiFiMessageProcessor`**: Command and event handlers were private methods of `WiFiManager`, unreachable by tests except through a live FreeRTOS task and queue. Extracting them as a public class with an interface made every handler directly testable, achieving 100% line coverage without FreeRTOS involvement.
+
+The `WiFiDriverHAL` was simplified to pure 1:1 delegation — no state, no policy. All sequencing logic moved to `WiFiBootstrapper`. This made the HAL trivially mockable and removed the need to test it directly.
+
+### Added
+- `add_credentials(ssid, password)`: stores up to 10 SSID/password pairs in NVS; adding a duplicate SSID updates its password in place; if the list is full, the last slot is silently overwritten
+- `set_credentials` retained as a compatibility alias for `add_credentials`
+- NVS initialized internally by `WiFiConfigStorage::init()` — including erase/reinit on invalid or version-mismatched partitions; no `nvs_flash_init()` required in application code
+- RSSI-aware credential invalidation: auth failures trigger `handle_suspect_failure(rssi)` which applies signal-dependent retry limits (1 retry at ≥ -55 dBm, 2 at ≥ -67, 5 at ≥ -80) before invalidating credentials — prevents false invalidation under weak signal
+- Exponential backoff for reconnection attempts
+- `ERROR_CREDENTIALS` state: safe idle after confirmed credential failure; no reconnection attempted; reserved entry point for future AP scanning and provisioning
+- Google Test / Google Mock as host test dependency
+- Dedicated test application per component (`host_test/test_wifi_manager`, `host_test/test_state_machine`, etc.)
+- Full test suite runnable via `ctest` — see [`host_test/README.md`](host_test/README.md)
+- Coverage report published to GitHub Pages on every push
+
+### Refactored
+- `WiFiManager` decomposed into six single-responsibility collaborators injected via interfaces:
+  - `WiFiBootstrapper` — init/deinit sequence and task creation
+  - `WiFiConfigStorage` — NVS persistence and credential management
+  - `WiFiEventHandler` — ESP-IDF event translation to internal messages
+  - `WiFiMessageProcessor` — command and event dispatch, state transition side effects
+  - `WiFiStateMachine` — pure FSM logic, transition matrices, backoff calculation
+  - `WiFiSyncManager` — FreeRTOS queue and event group encapsulation
+- FSM rewritten as declarative transition matrices (State × Event → NextState, State × Command → Action)
+- Driver's internal failure retry count set to zero — FSM has full control over reconnection timing
+- Kconfig removed — credentials set exclusively via `add_credentials()`
+
+---
 
 ## [1.0.0] - 2026-02-02
 
 ### Added
-- Initial release of WiFi Manager component for ESP32
-- Singleton pattern implementation for centralized WiFi management
-- Thread-safe WiFi operations using dedicated FreeRTOS task
-- Synchronous (blocking) and asynchronous (non-blocking) API methods
-- Complete state machine with 14 states for robust connection tracking
-- Automatic reconnection with exponential backoff strategy
-- WiFi credentials management (set, get, clear)
-- NVS-based credential persistence
-- Factory reset functionality
-- IP address acquisition handling (DHCP/Static)
-- Connection validation and error detection
-- Support for WiFi station mode (STA)
-- Comprehensive state reporting via `get_state()`
-- Event-driven architecture using ESP-IDF event system
-- Thread-safe state access with mutex protection
-
-### Features
-- **State Management**: 14 distinct states including UNINITIALIZED, INITIALIZED, STARTED, CONNECTING, CONNECTED_GOT_IP, DISCONNECTED, WAITING_RECONNECT, ERROR_CREDENTIALS, etc.
-- **Flexible API**: Both blocking (with timeout) and non-blocking variants for all major operations
-- **Retry Logic**: Built-in reconnection attempts with configurable backoff
-- **Credential Validation**: Track and persist credential validity
-- **Resource Safety**: Proper initialization and deinitialization of all system resources
+- Initial release of WiFiManager component for ESP32
+- Singleton pattern for centralized WiFi management
+- Thread-safe WiFi operations via dedicated FreeRTOS task
+- Synchronous (blocking) and asynchronous (non-blocking) API for all major operations
+- State machine with 14 states for connection tracking
+- Automatic reconnection with exponential backoff
+- Credential management: set, get, clear, factory reset
+- NVS-based credential persistence with validity flag
+- IP acquisition handling (DHCP)
+- Event-driven architecture via ESP-IDF event system
+- Mutex-protected state access
 
 [1.0.0]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.0.0
