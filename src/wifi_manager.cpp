@@ -244,6 +244,8 @@ esp_err_t WiFiManager::connect(uint32_t timeout_ms)
 {
     if (!sync_manager_->is_initialized())
         return ESP_ERR_INVALID_STATE;
+    if (!storage_->is_valid())
+        return ESP_ERR_WIFI_PASSWORD;
     Action action = state_machine_->validate_command(CommandId::CONNECT);
     if (action == Action::ERROR)
         return ESP_ERR_INVALID_STATE;
@@ -277,6 +279,8 @@ esp_err_t WiFiManager::connect()
 {
     if (!sync_manager_->is_initialized())
         return ESP_ERR_INVALID_STATE;
+    if (!storage_->is_valid())
+        return ESP_ERR_WIFI_PASSWORD;
     Action action = state_machine_->validate_command(CommandId::CONNECT);
     if (action == Action::ERROR)
         return ESP_ERR_INVALID_STATE;
@@ -388,9 +392,12 @@ esp_err_t WiFiManager::factory_reset()
         xSemaphoreGiveRecursive(state_mutex_);
         return ESP_ERR_INVALID_STATE;
     }
-    esp_err_t err = storage_->factory_reset();
-    state_machine_->reset_retries();
-    state_machine_->transition_to(State::INITIALIZED);
+    esp_err_t err = stop(3000);
+    if (err == ESP_OK) {
+        err = storage_->factory_reset();
+        state_machine_->reset_retries();
+        state_machine_->transition_to(State::INITIALIZED);
+    }
     xSemaphoreGiveRecursive(state_mutex_);
     return err;
 }
