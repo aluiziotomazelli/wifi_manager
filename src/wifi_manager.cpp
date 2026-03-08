@@ -360,9 +360,10 @@ esp_err_t WiFiManager::add_credentials(const std::string &ssid, const std::strin
     return err;
 }
 
-esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::string &password)
+// Deprecated, use add_credentials instead
+esp_err_t WiFiManager::set_credentials(const std::string &ssid, const std::string &password) // LCOV_EXCL_LINE
 {
-    return add_credentials(ssid, password);
+    return add_credentials(ssid, password); // LCOV_EXCL_LINE
 }
 
 esp_err_t WiFiManager::get_credentials(std::string &ssid, std::string &password)

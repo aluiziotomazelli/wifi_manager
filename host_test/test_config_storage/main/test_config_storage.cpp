@@ -204,6 +204,7 @@ TEST_F(WiFiConfigStorageTest, AddInvalidSsidAndPasswordTooLong)
 
 TEST_F(WiFiConfigStorageTest, FactoryResetCallsWifiRestore)
 {
+    GTEST_SKIP(); // factory_reset no more calls wifi_restore
     storage.init();
     EXPECT_FALSE(storage.is_valid());
 
@@ -224,7 +225,6 @@ TEST_F(WiFiConfigStorageTest, FactoryResetSetsValidFalse)
     storage.add_credentials("ssid", "pass");
     EXPECT_TRUE(storage.is_valid());
 
-    EXPECT_CALL(hal, wifi_restore()).WillOnce(Return(ESP_OK));
     storage.factory_reset();
 
     // After factory reset, valid flag must be cleared both in memory and NVS

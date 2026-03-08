@@ -170,6 +170,7 @@ TEST_F(WiFiManagerCommandsTest, ConnectAsyncSyncManagerNotInitializedReturnsInva
 TEST_F(WiFiManagerCommandsTest, ConnectAsyncValidateCommandErrorReturnsInvalidState)
 {
     reject_command(CommandId::CONNECT);
+    ON_CALL(*storage, is_valid()).WillByDefault(Return(true));
 
     EXPECT_EQ(ESP_ERR_INVALID_STATE, manager->connect());
 }
@@ -177,6 +178,7 @@ TEST_F(WiFiManagerCommandsTest, ConnectAsyncValidateCommandErrorReturnsInvalidSt
 TEST_F(WiFiManagerCommandsTest, ConnectAsyncValidateCommandSkipReturnsOk)
 {
     skip_command(CommandId::CONNECT);
+    ON_CALL(*storage, is_valid()).WillByDefault(Return(true));
 
     EXPECT_EQ(ESP_OK, manager->connect());
 }
@@ -184,11 +186,19 @@ TEST_F(WiFiManagerCommandsTest, ConnectAsyncValidateCommandSkipReturnsOk)
 TEST_F(WiFiManagerCommandsTest, ConnectAsyncPostsConnectCommand)
 {
     allow_command(CommandId::CONNECT);
+    ON_CALL(*storage, is_valid()).WillByDefault(Return(true));
 
     EXPECT_CALL(*sync_manager, post_message(Field(&wifi_manager::Message::cmd, CommandId::CONNECT)))
         .WillOnce(Return(ESP_OK));
 
     manager->connect();
+}
+TEST_F(WiFiManagerCommandsTest, ConnectAsyncWithInvalidCredentialsReturnsError)
+{
+    allow_command(CommandId::CONNECT);
+    ON_CALL(*storage, is_valid()).WillByDefault(Return(false));
+
+    EXPECT_EQ(ESP_ERR_WIFI_PASSWORD, manager->connect());
 }
 
 // =============================================================================

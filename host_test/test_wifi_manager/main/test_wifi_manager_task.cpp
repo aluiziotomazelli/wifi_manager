@@ -97,6 +97,9 @@ protected:
             }));
         ON_CALL(*bootstrapper, deinit(_)).WillByDefault(Return(ESP_OK));
 
+        // storage has valid flags
+        ON_CALL(*storage, is_valid()).WillByDefault(Return(true));
+
         manager = std::make_unique<WiFiManager>(
             std::move(driver_hal_owned),
             std::move(storage_owned),
@@ -270,6 +273,16 @@ TEST_F(WiFiManagerTaskTest, ConnectSyncReturnsFailWhenProcessorSetsConnectFailed
     EXPECT_EQ(ESP_FAIL, manager->connect(500));
 }
 
+TEST_F(WiFiManagerTaskTest, ConnectSyncReturnsErrorWhenStorageIsInvalid)
+{
+    setup_and_init();
+    ON_CALL(*storage, is_valid()).WillByDefault(Return(false)); // storage is invalid
+
+    EXPECT_CALL(*state_machine, validate_command(CommandId::CONNECT)).Times(0); // should not be called
+
+    EXPECT_EQ(ESP_ERR_WIFI_PASSWORD, manager->connect(500));
+}
+
 // =============================================================================
 // disconnect(timeout_ms) — sync variant
 // =============================================================================
@@ -333,7 +346,6 @@ TEST_P(WiFiManagerSyncGuardTest, ReturnsOkWhenActionSkip)
 TEST_P(WiFiManagerSyncGuardTest, ReturnsFailWhenQueueFull)
 {
     setup_and_init();
-
     ON_CALL(*state_machine, validate_command(GetParam().cmd)).WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
 
     // Suspend task so it doesn't consume messages while we fill the queue
@@ -353,7 +365,6 @@ TEST_P(WiFiManagerSyncGuardTest, ReturnsTimeoutWhenNoBitsSet)
 {
     setup_and_init();
     // processor does NOT set any bits — timeout must occur
-
     ON_CALL(*state_machine, validate_command(GetParam().cmd)).WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
 
     EXPECT_EQ(ESP_ERR_TIMEOUT, GetParam().call(manager.get(), 50));
