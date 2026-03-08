@@ -179,14 +179,15 @@ The test suite runs on the host (Linux) via Google Test with FreeRTOS POSIX simu
 
 Coverage per component:
 
-| Component | Lines | Functions | Branches |
+| Component |         Lines | Functions | Branches |
 |---|---|---|---|
-| `WiFiStateMachine` | 100% | 100% | 100% |
-| `WiFiEventHandler` | 100% | 100% | 100% |
-| `WiFiMessageProcessor` | 100% | 100% | 94% |
-| `WiFiManager` | 98% | 96% | 96% |
-| `WiFiBootstrapper` | 95% | 100% | 80% |
-| `WiFiConfigStorage` | 97% | 100% | 68% |
+| `WiFiBootstrapper`    | 100% | 100% | 100% |
+| `WiFiConfigStorage`   | 95%  | 100% | 60%  |
+| `WiFiEventHandler`    | 100% | 100% | 100% |
+| `WiFiManager`         | 99%  | 100% | 95%  |
+| `WiFiMessageProcessor`| 100% | 100% | 94%  |
+| `WiFiStateMachine`    | 100% | 100% | 100% |
+| `WiFiSyncManager`     | 86%  | 90%  | 76%  |
 
 Full coverage report: [gh-pages](https://aluiziotomazelli.github.io/wifi_manager/index.html)
 
