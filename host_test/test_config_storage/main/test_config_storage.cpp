@@ -50,25 +50,6 @@ TEST_F(WiFiConfigStorageTest, InitLoadsValidFlag)
     EXPECT_FALSE(storage.is_valid());
 }
 
-TEST_F(WiFiConfigStorageTest, InitPersistsValidFlagAndSyncsToDriver)
-{
-    EXPECT_EQ(ESP_OK, storage.init());
-
-    // Save credentials, which sets valid flag
-    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(Return(ESP_OK));
-    storage.add_credentials("sync_ssid", "sync_pass");
-
-    // Re-init with a new instance
-    WiFiConfigStorage storage2{hal, "test_ns"};
-    // Init should now load "sync_ssid" and call wifi_set_config on driver
-    wifi_config_t synced_cfg = {};
-    EXPECT_CALL(hal, wifi_set_config(_)).WillOnce(DoAll(SaveArgPointee<0>(&synced_cfg), Return(ESP_OK)));
-
-    EXPECT_EQ(ESP_OK, storage2.init());
-    EXPECT_TRUE(storage2.is_valid());
-    EXPECT_STREQ("sync_ssid", (char *)synced_cfg.sta.ssid);
-}
-
 // =============================================================================
 // add_credentials / load_credentials
 // =============================================================================

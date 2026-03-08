@@ -124,6 +124,36 @@ TEST_F(WiFiBootstrapperTest, InitConfigWifiModeFailure)
     EXPECT_EQ(ESP_FAIL, bootstrapper->init(dummy_task, nullptr, &task_handle));
 }
 
+TEST_F(WiFiBootstrapperTest, InitWithSuccessfulLoadCredentials)
+{
+    setup_successful_init();
+    ON_CALL(storage, is_valid()).WillByDefault(Return(true)); // If valid
+    EXPECT_CALL(storage, load_credentials(_, _))
+        .Times(1)
+        .WillOnce(Return(ESP_OK));                        // load_credentials must be called, if returns ESP_OK
+    EXPECT_CALL(storage, add_credentials(_, _)).Times(1); // add_credentials must be called
+    EXPECT_EQ(ESP_OK, bootstrapper->init(dummy_task, nullptr, &task_handle)); // init will not fail due credentials
+}
+
+TEST_F(WiFiBootstrapperTest, InitWithFailedLoadCredentials)
+{
+    setup_successful_init();
+    ON_CALL(storage, is_valid()).WillByDefault(Return(true)); // If valid
+    ON_CALL(storage, load_credentials(_, _))
+        .WillByDefault(Return(ESP_FAIL));                 // load_credentials will be called, if returns ESP_FAIL
+    EXPECT_CALL(storage, add_credentials(_, _)).Times(0); // add_credentials must not be called
+    EXPECT_EQ(ESP_OK, bootstrapper->init(dummy_task, nullptr, &task_handle)); // init will not fail due credentials
+}
+
+TEST_F(WiFiBootstrapperTest, InitSkipsCredentialSyncWhenNotValid)
+{
+    setup_successful_init();
+    ON_CALL(storage, is_valid()).WillByDefault(Return(false)); // If not valid
+    EXPECT_CALL(storage, load_credentials(_, _)).Times(0);     // load_credentials must not be called
+    EXPECT_CALL(storage, add_credentials(_, _)).Times(0);      // add_credentials must not be called
+    EXPECT_EQ(ESP_OK, bootstrapper->init(dummy_task, nullptr, &task_handle));
+}
+
 TEST_F(WiFiBootstrapperTest, InitSyncManagerFailure)
 {
     setup_successful_init();
