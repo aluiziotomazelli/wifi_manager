@@ -66,13 +66,13 @@ graph TD
     MP --> ST
 
     style App fill:#f5f5f5,stroke:#999
-    style WM fill:#dae8fc,stroke:#6c8ebf
-    style BS fill:#d5e8d4,stroke:#82b366
-    style MP fill:#d5e8d4,stroke:#82b366
-    style SM fill:#fff2cc,stroke:#d6b656
-    style SY fill:#fff2cc,stroke:#d6b656
-    style ST fill:#fff2cc,stroke:#d6b656
-    style HAL fill:#f8cecc,stroke:#b85450
+    style WM fill:#dae8fc,stroke:#6c8ebf, color:#000000
+    style BS fill:#d5e8d4,stroke:#82b366, color:#000000
+    style MP fill:#d5e8d4,stroke:#82b366, color:#000000
+    style SM fill:#fff2cc,stroke:#d6b656, color:#000000
+    style SY fill:#fff2cc,stroke:#d6b656, color:#000000
+    style ST fill:#fff2cc,stroke:#d6b656, color:#000000
+    style HAL fill:#f8cecc,stroke:#b85450, color:#000000
 ```
 
 All collaborators are injected via interfaces, making every layer independently testable without hardware.

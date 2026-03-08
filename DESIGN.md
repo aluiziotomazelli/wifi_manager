@@ -27,16 +27,16 @@ graph TD
     EV["ESP-IDF Event Loop"] --> EH["WiFiEventHandler\n(event translation)"]
     EH --> SY
 
-    style App fill:#f5f5f5,stroke:#999
-    style WM fill:#dae8fc,stroke:#6c8ebf
-    style BS fill:#d5e8d4,stroke:#82b366
-    style MP fill:#d5e8d4,stroke:#82b366
-    style SM fill:#fff2cc,stroke:#d6b656
-    style SY fill:#fff2cc,stroke:#d6b656
-    style ST fill:#fff2cc,stroke:#d6b656
-    style HAL fill:#f8cecc,stroke:#b85450
-    style EH fill:#e1d5e7,stroke:#9673a6
-    style EV fill:#f5f5f5,stroke:#999
+    style App fill:#f5f5f5,stroke:#666
+    style WM  fill:#dae8fc,stroke:#4a7ab5, color:#000000
+    style BS  fill:#d5e8d4,stroke:#5a9e52, color:#000000
+    style MP  fill:#d5e8d4,stroke:#5a9e52, color:#000000
+    style SM  fill:#fff2cc,stroke:#c9a800, color:#000000
+    style SY  fill:#fff2cc,stroke:#c9a800, color:#000000
+    style ST  fill:#fff2cc,stroke:#c9a800, color:#000000
+    style HAL fill:#f8cecc,stroke:#c0392b, color:#000000
+    style EH  fill:#e1d5e7,stroke:#7d5a9a, color:#000000
+    style EV  fill:#f5f5f5,stroke:#666, color:#000000
 ```
 
 ---
@@ -173,14 +173,14 @@ stateDiagram-v2
 
     CONNECTING --> WAITING_RECONNECT : STA_DISCONNECTED\n(transient)
     CONNECTED_GOT_IP --> WAITING_RECONNECT : STA_DISCONNECTED\n(transient)
-    WAITING_RECONNECT --> CONNECTING : backoff elapsed +\nis_valid()
+    WAITING_RECONNECT --> CONNECTING : backoff elapsed + is_valid()
 
     CONNECTING --> ERROR_CREDENTIALS : STA_DISCONNECTED\n(suspect, RSSI-confirmed)
     CONNECTED_GOT_IP --> ERROR_CREDENTIALS : STA_DISCONNECTED\n(suspect, RSSI-confirmed)
-    WAITING_RECONNECT --> DISCONNECTED : backoff elapsed +\n!is_valid()
+    WAITING_RECONNECT --> DISCONNECTED : backoff elapsed + !is_valid()
 
     DISCONNECTED --> CONNECTING : connect()
-    ERROR_CREDENTIALS --> INITIALIZED : clear_credentials()\nor factory_reset()
+    ERROR_CREDENTIALS --> INITIALIZED : clear_credentials() or factory_reset()
 ```
 
 ### State descriptions
