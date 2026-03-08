@@ -33,20 +33,6 @@ esp_err_t WiFiConfigStorage::init()
     if (err == ESP_OK) {
         err = load_valid_flag();
     }
-
-    if (err == ESP_OK && is_valid_) {
-        std::string ssid, pass;
-        err = load_credentials(ssid, pass);
-        if (err == ESP_ERR_NOT_FOUND) {
-            ESP_LOGW(TAG, "Credentials not found, assuming invalid");
-            is_valid_ = false;
-            err = ESP_OK;
-        }
-        else if (err == ESP_OK) {
-            err = sync_to_driver(ssid, pass);
-        }
-    }
-
     return err;
 }
 

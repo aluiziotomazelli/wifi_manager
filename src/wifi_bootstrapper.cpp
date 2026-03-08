@@ -66,6 +66,14 @@ esp_err_t WiFiBootstrapper::init(TaskFunction_t task_fn, void *pvParameters, Tas
         return err;
     }
 
+    if (storage_.is_valid()) {
+        std::string ssid, pass;
+        err = storage_.load_credentials(ssid, pass);
+        if (err == ESP_OK) {
+            err = storage_.add_credentials(ssid, pass);
+        }
+    }
+
     err = sync_manager_.init();
     if (err != ESP_OK) {
         deinit(pxTaskHandle);
