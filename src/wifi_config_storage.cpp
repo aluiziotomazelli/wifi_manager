@@ -161,7 +161,7 @@ esp_err_t WiFiConfigStorage::clear_credentials()
 
 esp_err_t WiFiConfigStorage::factory_reset()
 {
-    hal_.wifi_restore();
+    // hal_.wifi_restore();
 
     nvs_handle_t h;
     esp_err_t err = nvs_open(nvs_namespace_, NVS_READWRITE, &h);
