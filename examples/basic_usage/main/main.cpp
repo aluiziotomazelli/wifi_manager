@@ -40,7 +40,7 @@ extern "C" void app_main(void) {
 	ESP_LOGI(TAG, "WiFi Manager Basic Example Starting...");
 
 	// Get the singleton instance
-	auto &wifi_mgr = WiFiManager::get_instance();
+	auto &wifi_mgr = wifi_manager::WiFiManager::get_instance();
 
 	// Step 1: Initialize the WiFi manager
 	ESP_LOGI(TAG, "Initializing WiFi Manager...");
@@ -91,6 +91,7 @@ extern "C" void app_main(void) {
 
 	// Step 5: Monitor connection status
 	while (1) {
+		using namespace wifi_manager;
 		WiFiManager::State state = wifi_mgr.get_state();
 
 		switch (state) {
