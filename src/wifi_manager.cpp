@@ -423,6 +423,28 @@ TaskHandle_t WiFiManager::get_task_handle() const
     return task_handle_;
 }
 
+esp_err_t WiFiManager::get_ap_info(wifi_ap_record_t &info)
+{
+    xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
+    if (state_machine_->get_current_state() == State::UNINITIALIZED) {
+        xSemaphoreGiveRecursive(state_mutex_);
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_err_t err = driver_hal_->wifi_sta_get_ap_info(&info);
+    xSemaphoreGiveRecursive(state_mutex_);
+    return err;
+}
+
+esp_err_t WiFiManager::get_rssi(int8_t &rssi)
+{
+    wifi_ap_record_t info = {};
+    esp_err_t err = get_ap_info(info);
+    if (err == ESP_OK) {
+        rssi = info.rssi;
+    }
+    return err;
+}
+
 // =================================================================================================
 // Internal Helpers
 // =================================================================================================

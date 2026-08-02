@@ -159,6 +159,16 @@ public:
      */
     TaskHandle_t get_task_handle() const override;
 
+    /**
+     * @copydoc IWiFiManager::get_ap_info()
+     */
+    esp_err_t get_ap_info(wifi_ap_record_t &info) override;
+
+    /**
+     * @copydoc IWiFiManager::get_rssi()
+     */
+    esp_err_t get_rssi(int8_t &rssi) override;
+
 private:
     /**
      * @brief Main FreeRTOS task loop that executes driver operations.
