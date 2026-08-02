@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-02
+
+### Added
+- `wifi_sta_get_ap_info` wrapper method added to `IWiFiDriverHAL` / `WiFiDriverHAL` matching ESP-IDF's `esp_wifi_sta_get_ap_info` (#6)
+- `get_ap_info(wifi_ap_record_t &info)` and `get_rssi(int8_t &rssi)` high-level methods added to `IWiFiManager` / `WiFiManager`
+
 ## [1.1.0] - 2026-03-07
 
 ### Architecture
@@ -60,4 +66,6 @@ The `WiFiDriverHAL` was simplified to pure 1:1 delegation — no state, no polic
 - Event-driven architecture via ESP-IDF event system
 - Mutex-protected state access
 
+[1.2.0]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.2.0
+[1.1.0]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.1.0
 [1.0.0]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.0.0
