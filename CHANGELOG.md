@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-08-02
+
+### Fixed
+- Added `Config` struct to `init(const Config &config)` allowing applications to configure FreeRTOS task stack size and priority instead of hardcoded values (defaults: 4096 bytes stack, priority 5)
+
 ## [1.2.0] - 2026-08-02
 
 ### Added
@@ -66,6 +71,7 @@ The `WiFiDriverHAL` was simplified to pure 1:1 delegation — no state, no polic
 - Event-driven architecture via ESP-IDF event system
 - Mutex-protected state access
 
+[1.2.1]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.2.1
 [1.2.0]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.2.0
 [1.1.0]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.1.0
 [1.0.0]: https://github.com/aluiziotomazelli/wifi_manager/releases/tag/v1.0.0
