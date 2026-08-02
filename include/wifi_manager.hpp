@@ -72,7 +72,7 @@ public:
     /**
      * @copydoc IWiFiManager::init()
      */
-    esp_err_t init() override;
+    esp_err_t init(const Config &config = Config{}) override;
 
     /**
      * @copydoc IWiFiManager::deinit()

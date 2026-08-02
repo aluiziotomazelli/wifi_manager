@@ -89,10 +89,10 @@ protected:
         ON_CALL(*state_machine, get_wait_ms()).WillByDefault(Return(0xFFFFFFFF));
 
         // bootstrapper: init() creates the task and marks sync as initialized
-        ON_CALL(*bootstrapper, init(_, _, _))
-            .WillByDefault(Invoke([this](TaskFunction_t fn, void *params, TaskHandle_t *handle) {
+        ON_CALL(*bootstrapper, init(_, _, _, _, _))
+            .WillByDefault(Invoke([this](TaskFunction_t fn, void *params, TaskHandle_t *handle, uint32_t stack_size, UBaseType_t priority) {
                 sync_initialized = true;
-                BaseType_t result = xTaskCreate(fn, "wifi_task", 4096, params, 5, handle);
+                BaseType_t result = xTaskCreate(fn, "wifi_task", stack_size, params, priority, handle);
                 return result == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
             }));
         ON_CALL(*bootstrapper, deinit(_)).WillByDefault(Return(ESP_OK));

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 /**
  * @file wifi_types.hpp
@@ -8,6 +10,16 @@
  */
 
 namespace wifi_manager {
+
+/**
+ * @struct Config
+ * @brief Configuration parameters for initializing WiFiManager.
+ */
+struct Config
+{
+    uint32_t task_stack_size = 4096; ///< Stack size for WiFiManager task in bytes (default: 4096, recommended: 3072-8192)
+    UBaseType_t task_priority = 5;    ///< Priority for WiFiManager task (default: 5)
+};
 
 /**
  * @enum State

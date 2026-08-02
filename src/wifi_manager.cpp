@@ -86,7 +86,7 @@ WiFiManager::~WiFiManager()
 // Lifecycle Management
 // =================================================================================================
 
-esp_err_t WiFiManager::init()
+esp_err_t WiFiManager::init(const Config &config)
 {
     xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
     if (state_machine_->get_current_state() != State::UNINITIALIZED) {
@@ -98,7 +98,12 @@ esp_err_t WiFiManager::init()
     xSemaphoreGiveRecursive(state_mutex_);
 
     // Pass wifi_task explicitly; WiFiBootstrapper is agnostic about which function it creates.
-    esp_err_t err = bootstrapper_->init(WiFiManager::wifi_task, this, &task_handle_);
+    esp_err_t err = bootstrapper_->init(
+        WiFiManager::wifi_task,
+        this,
+        &task_handle_,
+        config.task_stack_size,
+        config.task_priority);
     if (err != ESP_OK) {
         xSemaphoreTakeRecursive(state_mutex_, portMAX_DELAY);
         state_machine_->transition_to(State::UNINITIALIZED);

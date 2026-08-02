@@ -8,8 +8,11 @@ The `IWiFiManager` interface defines the high-level API for managing WiFi connec
 
 ### Lifecycle Management
 
-#### `init`
+#### `init(const Config &config = Config{})`
 Initializes the WiFi Manager component. Prepares internal resources, initializes NVS, sets up the WiFi driver in Station mode, and starts the background management task.
+
+**Parameters:**
+- `config`: [in] Optional `Config` struct specifying `task_stack_size` (default: 4096 bytes) and `task_priority` (default: 5).
 
 **Returns:**
 - `ESP_OK`: Success or already initialized.
@@ -218,6 +221,14 @@ static WiFiManager &get_instance();
 ---
 
 ## Types and Constants
+
+### `Config`
+Configuration parameters for initializing the WiFi Manager.
+
+| Field | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `task_stack_size` | `uint32_t` | `4096` | Stack size for WiFiManager FreeRTOS task in bytes (recommended: 3072–8192) |
+| `task_priority` | `UBaseType_t` | `5` | Priority for WiFiManager FreeRTOS task |
 
 ### `State`
 Internal states of the WiFi Manager.
