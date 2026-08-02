@@ -179,6 +179,30 @@ Get the FreeRTOS task handle for the background WiFi task.
 **Returns:**
 - `TaskHandle_t`: Handle to the internal WiFi task.
 
+#### `get_ap_info(wifi_ap_record_t &info)`
+Get information of the connected Access Point.
+
+**Parameters:**
+- `info`: [out] Reference to `wifi_ap_record_t` structure to store AP information.
+
+**Returns:**
+- `ESP_OK`: Success.
+- `ESP_ERR_INVALID_STATE`: Manager not initialized.
+- `ESP_ERR_WIFI_NOT_CONNECT`: Station is in disconnect status.
+- `Other`: Error codes propagated from the underlying WiFi driver.
+
+#### `get_rssi(int8_t &rssi)`
+Get Received Signal Strength Indicator (RSSI) of the connected Access Point in dBm.
+
+**Parameters:**
+- `rssi`: [out] Reference to `int8_t` to store the RSSI value (in dBm).
+
+**Returns:**
+- `ESP_OK`: Success.
+- `ESP_ERR_INVALID_STATE`: Manager not initialized.
+- `ESP_ERR_WIFI_NOT_CONNECT`: Station is in disconnect status.
+- `Other`: Error codes propagated from the underlying WiFi driver.
+
 ---
 
 ## Implementation: `WiFiManager`

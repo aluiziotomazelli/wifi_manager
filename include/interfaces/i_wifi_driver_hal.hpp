@@ -156,6 +156,11 @@ public:
     virtual esp_err_t wifi_deinit() = 0;
 
     /**
+     * @copydoc esp_wifi_sta_get_ap_info
+     */
+    virtual esp_err_t wifi_sta_get_ap_info(wifi_ap_record_t *info) = 0;
+
+    /**
      * @brief Destroy the default WiFi netif.
      * @internal
      * @param netif Pointer to the netif instance.

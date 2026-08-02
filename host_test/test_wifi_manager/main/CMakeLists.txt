@@ -6,6 +6,7 @@ idf_component_register(
         "test_wifi_manager_commands.cpp"
         "test_wifi_manager_credentials.cpp"
         "test_wifi_manager_task.cpp"
+        "test_wifi_manager_ap_info.cpp"
     INCLUDE_DIRS
         "."
         "../../common"

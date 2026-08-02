@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esp_err.h"
+#include "esp_wifi.h"
 #include "wifi_types.hpp"
 #include <string>
 
@@ -240,6 +241,30 @@ public:
      * @return Handle to the internal WiFi task.
      */
     virtual TaskHandle_t get_task_handle() const = 0;
+
+    /**
+     * @brief Get information of the connected Access Point.
+     *
+     * @param[out] info Reference to wifi_ap_record_t structure to store AP information.
+     * @return
+     *     - ESP_OK: Success.
+     *     - ESP_ERR_INVALID_STATE: Manager not initialized.
+     *     - ESP_ERR_WIFI_NOT_CONNECT: Station is in disconnect status.
+     *     - Other error codes propagated from the underlying WiFi driver.
+     */
+    virtual esp_err_t get_ap_info(wifi_ap_record_t &info) = 0;
+
+    /**
+     * @brief Get Received Signal Strength Indicator (RSSI) of the connected Access Point.
+     *
+     * @param[out] rssi Reference to int8_t to store the RSSI value (in dBm).
+     * @return
+     *     - ESP_OK: Success.
+     *     - ESP_ERR_INVALID_STATE: Manager not initialized.
+     *     - ESP_ERR_WIFI_NOT_CONNECT: Station is in disconnect status.
+     *     - Other error codes propagated from the underlying WiFi driver.
+     */
+    virtual esp_err_t get_rssi(int8_t &rssi) = 0;
 };
 
 } // namespace wifi_manager

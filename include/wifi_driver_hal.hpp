@@ -124,6 +124,14 @@ public:
     esp_err_t wifi_deinit() override { return esp_wifi_deinit(); };
 
     /**
+     * @copydoc IWiFiDriverHAL::wifi_sta_get_ap_info()
+     */
+    esp_err_t wifi_sta_get_ap_info(wifi_ap_record_t *info) override
+    {
+        return esp_wifi_sta_get_ap_info(info);
+    };
+
+    /**
      * @copydoc IWiFiDriverHAL::netif_destroy_default_wifi()
      */
     void netif_destroy_default_wifi(esp_netif_t *netif) override { esp_netif_destroy_default_wifi(netif); };

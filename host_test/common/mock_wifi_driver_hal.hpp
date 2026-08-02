@@ -39,6 +39,7 @@ public:
     MOCK_METHOD(esp_err_t, wifi_set_config, (wifi_config_t * cfg), (override));
     MOCK_METHOD(esp_err_t, wifi_get_config, (wifi_config_t * cfg), (override));
     MOCK_METHOD(esp_err_t, wifi_deinit, (), (override));
+    MOCK_METHOD(esp_err_t, wifi_sta_get_ap_info, (wifi_ap_record_t * info), (override));
     MOCK_METHOD(void, netif_destroy_default_wifi, (esp_netif_t * netif), (override));
     MOCK_METHOD(
         BaseType_t,
