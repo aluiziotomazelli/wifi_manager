@@ -31,12 +31,14 @@ public:
      * This method prepares internal resources, initializes NVS, sets up the WiFi driver
      * in Station mode, and starts the background management task.
      *
+     * @param config Optional configuration parameters (task stack size, task priority).
+     *
      * @return
      *     - ESP_OK: Success or already initialized.
      *     - ESP_ERR_NO_MEM: Failed to allocate memory for internal synchronization objects or task.
      *     - Other: Error codes propagated from the underlying NVS or WiFi driver initialization.
      */
-    virtual esp_err_t init() = 0;
+    virtual esp_err_t init(const Config &config = Config{}) = 0;
 
     /**
      * @brief Deinitialize the WiFi Manager component.

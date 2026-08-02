@@ -34,7 +34,12 @@ public:
     /**
      * @copydoc IWiFiBootstrapper::init()
      */
-    esp_err_t init(TaskFunction_t task_fn, void *pvParameters, TaskHandle_t *pxTaskHandle) override;
+    esp_err_t init(
+        TaskFunction_t task_fn,
+        void *pvParameters,
+        TaskHandle_t *pxTaskHandle,
+        uint32_t task_stack_size = 4096,
+        UBaseType_t task_priority = 5) override;
 
     /**
      * @copydoc IWiFiBootstrapper::deinit()

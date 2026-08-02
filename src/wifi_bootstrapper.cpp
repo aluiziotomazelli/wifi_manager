@@ -19,7 +19,12 @@ WiFiBootstrapper::WiFiBootstrapper(
 {
 }
 
-esp_err_t WiFiBootstrapper::init(TaskFunction_t task_fn, void *pvParameters, TaskHandle_t *pxTaskHandle)
+esp_err_t WiFiBootstrapper::init(
+    TaskFunction_t task_fn,
+    void *pvParameters,
+    TaskHandle_t *pxTaskHandle,
+    uint32_t task_stack_size,
+    UBaseType_t task_priority)
 {
     esp_err_t err = storage_.init();
     if (err != ESP_OK) {
@@ -94,7 +99,7 @@ esp_err_t WiFiBootstrapper::init(TaskFunction_t task_fn, void *pvParameters, Tas
 
     // Use the injected task function pointer instead of a hardcoded symbol,
     // keeping WiFiBootstrapper decoupled from any concrete WiFiManager type.
-    BaseType_t task_created = driver_hal_.task_create(task_fn, "wifi_task", 4096, pvParameters, 5, pxTaskHandle);
+    BaseType_t task_created = driver_hal_.task_create(task_fn, "wifi_task", task_stack_size, pvParameters, task_priority, pxTaskHandle);
     if (task_created != pdPASS) {
         ESP_LOGE(TAG, "Failed to create wifi task");
         deinit(pxTaskHandle);

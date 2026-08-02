@@ -348,3 +348,13 @@ TEST_F(WiFiBootstrapperTest, DeinitForcesTaskDeleteWhenPostMessageFails)
     EXPECT_EQ(ESP_OK, bootstrapper->deinit(&task_handle));
     EXPECT_EQ(nullptr, task_handle);
 }
+
+TEST_F(WiFiBootstrapperTest, InitPassesCustomTaskStackSizeAndPriorityToDriverHAL)
+{
+    setup_successful_init();
+
+    EXPECT_CALL(driver_hal, task_create(_, StrEq("wifi_task"), 8192, _, 7, _))
+        .WillOnce(Return(pdPASS));
+
+    EXPECT_EQ(ESP_OK, bootstrapper->init(dummy_task, nullptr, &task_handle, 8192, 7));
+}

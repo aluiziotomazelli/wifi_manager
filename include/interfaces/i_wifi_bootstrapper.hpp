@@ -29,16 +29,23 @@ public:
      * on any concrete WiFiManager symbol. The caller (WiFiManager) is responsible for passing
      * its own static task entry point (e.g. WiFiManager::wifi_task).
      *
-     * @param task_fn     FreeRTOS-compatible task entry point (void(*)(void*)).
-     * @param pvParameters Opaque pointer forwarded to the task on creation (typically `this`).
-     * @param pxTaskHandle Output pointer to the created task handle.
+     * @param task_fn         FreeRTOS-compatible task entry point (void(*)(void*)).
+     * @param pvParameters     Opaque pointer forwarded to the task on creation (typically `this`).
+     * @param pxTaskHandle     Output pointer to the created task handle.
+     * @param task_stack_size  Stack size for the created task in bytes (default: 4096).
+     * @param task_priority    Priority for the created task (default: 5).
      *
      * @return
      *     - ESP_OK: Success.
      *     - ESP_ERR_NO_MEM: Failed to create the background task or other resources.
      *     - Other: Error codes from sub-component initialization.
      */
-    virtual esp_err_t init(TaskFunction_t task_fn, void *pvParameters, TaskHandle_t *pxTaskHandle) = 0;
+    virtual esp_err_t init(
+        TaskFunction_t task_fn,
+        void *pvParameters,
+        TaskHandle_t *pxTaskHandle,
+        uint32_t task_stack_size = 4096,
+        UBaseType_t task_priority = 5) = 0;
 
     /**
      * @brief Deinitialize all WiFi sub-components and stop the background task.

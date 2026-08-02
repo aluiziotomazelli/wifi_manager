@@ -59,7 +59,7 @@ protected:
 
     State current_state = State::UNINITIALIZED;
 
-    void setup_successful_init() { ON_CALL(*bootstrapper, init(_, _, _)).WillByDefault(Return(ESP_OK)); }
+    void setup_successful_init() { ON_CALL(*bootstrapper, init(_, _, _, _, _)).WillByDefault(Return(ESP_OK)); }
 };
 
 TEST_F(WiFiManagerInitTest, InitAlreadyInitializedReturnsOkWithoutCallingBootstrapper)
@@ -71,14 +71,14 @@ TEST_F(WiFiManagerInitTest, InitAlreadyInitializedReturnsOkWithoutCallingBootstr
     ASSERT_EQ(State::INITIALIZED, manager->get_state());
 
     // Second init must return ESP_OK immediately without calling bootstrapper again
-    EXPECT_CALL(*bootstrapper, init(_, _, _)).Times(0);
+    EXPECT_CALL(*bootstrapper, init(_, _, _, _, _)).Times(0);
 
     EXPECT_EQ(ESP_OK, manager->init());
 }
 
 TEST_F(WiFiManagerInitTest, InitBootstrapperFailurePropagatesError)
 {
-    EXPECT_CALL(*bootstrapper, init(_, _, _)).WillOnce(Return(ESP_FAIL));
+    EXPECT_CALL(*bootstrapper, init(_, _, _, _, _)).WillOnce(Return(ESP_FAIL));
 
     EXPECT_EQ(ESP_FAIL, manager->init());
 
@@ -143,4 +143,17 @@ TEST_F(WiFiManagerInitTest, DeinitWithActiveWifiPostsStopCommand)
     EXPECT_CALL(*sync_manager, post_message(Field(&wifi_manager::Message::cmd, CommandId::STOP))).Times(1);
 
     manager->deinit();
+}
+
+TEST_F(WiFiManagerInitTest, InitWithCustomConfigForwardsParametersToBootstrapper)
+{
+    Config custom_config = {
+        .task_stack_size = 6144,
+        .task_priority = 6
+    };
+
+    EXPECT_CALL(*bootstrapper, init(_, _, _, 6144, 6))
+        .WillOnce(Return(ESP_OK));
+
+    EXPECT_EQ(ESP_OK, manager->init(custom_config));
 }
