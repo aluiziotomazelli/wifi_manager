@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-18
+
+### Added
+- Added optional `max_retries` (default: 0) and `base_delay_ms` (default: 1500) parameters to synchronous `IWiFiManager::connect(uint32_t timeout_ms, uint8_t max_retries = 0, uint32_t base_delay_ms = 1500)`.
+- Integrated automatic disconnect and linear backoff delays between failed connection attempts in `WiFiManager::connect`.
+- Added comprehensive unit tests in `WiFiManagerTaskTest` verifying single-attempt behavior, recovery on subsequent retries, retry exhaustion, and timeout handling.
+
 ## [1.2.1] - 2026-08-02
 
 ### Fixed

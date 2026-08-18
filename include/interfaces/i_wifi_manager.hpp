@@ -107,19 +107,24 @@ public:
     virtual esp_err_t stop() = 0;
 
     /**
-     * @brief Synchronously connect to the Access Point using stored credentials.
+     * @brief Synchronously connect to the Access Point using stored credentials with optional retries.
      *
      * Blocks until the connection is established and an IP address is obtained, or the timeout occurs.
+     * If max_retries > 0 and an attempt fails or times out, the method will issue a disconnect,
+     * wait with linear backoff (base_delay_ms * attempt), and retry up to max_retries additional times.
      *
-     * @param timeout_ms Maximum time in milliseconds to wait for the connection to complete.
+     * @param timeout_ms Maximum time in milliseconds to wait for each individual connection attempt.
+     * @param max_retries Number of retry attempts upon failure/timeout (default: 0 = 1 attempt total).
+     * @param base_delay_ms Base delay in milliseconds between failed attempts (default: 1500 ms).
      *
      * @return
      *     - ESP_OK: Successfully connected and obtained an IP address.
      *     - ESP_ERR_INVALID_STATE: Manager not initialized, WiFi not started, or in an invalid state.
-     *     - ESP_ERR_TIMEOUT: Operation timed out before obtaining an IP.
+     *     - ESP_ERR_TIMEOUT: Operation timed out before obtaining an IP across all attempts.
      *     - ESP_FAIL: Internal command queue error or connection failure.
+     *     - ESP_ERR_WIFI_PASSWORD: No valid credentials stored in NVS.
      */
-    virtual esp_err_t connect(uint32_t timeout_ms) = 0;
+    virtual esp_err_t connect(uint32_t timeout_ms, uint8_t max_retries = 0, uint32_t base_delay_ms = 1500) = 0;
 
     /**
      * @brief Asynchronously connect to the Access Point using stored credentials.

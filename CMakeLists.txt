@@ -13,6 +13,7 @@ idf_component_register(
     INCLUDE_DIRS 
         "include"
         "include/interfaces"
+        "include/mocks"
                     
     REQUIRES 
         esp_event 
