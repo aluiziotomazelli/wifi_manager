@@ -74,18 +74,20 @@ Asynchronously stops the WiFi driver. Queues a stop command to the background ta
 
 ### Connection Control
 
-#### `connect(uint32_t timeout_ms)`
-Synchronously connect to the Access Point using stored credentials. Blocks until the connection is established and an IP address is obtained, or the timeout occurs.
+#### `connect(uint32_t timeout_ms, uint8_t max_retries = 0, uint32_t base_delay_ms = 1500)`
+Synchronously connect to the Access Point using stored credentials with optional automatic retries. Blocks until the connection is established and an IP address is obtained, or all retry attempts are exhausted.
 
 **Parameters:**
-- `timeout_ms`: Maximum time in milliseconds to wait for the connection to complete.
+- `timeout_ms`: Maximum time in milliseconds to wait for each individual connection attempt.
+- `max_retries`: [optional] Number of retry attempts upon failure/timeout (default: 0 = 1 attempt total).
+- `base_delay_ms`: [optional] Base delay in milliseconds between retry attempts with linear scaling (default: 1500 ms).
 
 **Returns:**
 - `ESP_OK`: Successfully connected and obtained an IP address.
 - `ESP_ERR_INVALID_STATE`: Manager not initialized, WiFi not started, or in an invalid state.
-- `ESP_ERR_TIMEOUT`: Operation timed out before obtaining an IP.
-- `ESP_FAIL`: Internal command queue error or connection failure.
-- `ESP_ERR_WIFI_PASSWORD`: no valid credentials stored.
+- `ESP_ERR_TIMEOUT`: Operation timed out before obtaining an IP address across all attempts.
+- `ESP_FAIL`: Connection failed (e.g., rejected by AP or bad credentials).
+- `ESP_ERR_WIFI_PASSWORD`: No valid credentials stored in NVS.
 
 #### `connect()`
 Asynchronously connect to the Access Point using stored credentials. Queues a connect command to the background task and returns immediately.

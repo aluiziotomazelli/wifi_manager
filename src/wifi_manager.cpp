@@ -245,7 +245,7 @@ esp_err_t WiFiManager::stop()
 // Connection Control
 // =================================================================================================
 
-esp_err_t WiFiManager::connect(uint32_t timeout_ms)
+esp_err_t WiFiManager::connect(uint32_t timeout_ms, uint8_t max_retries, uint32_t base_delay_ms)
 {
     if (!sync_manager_->is_initialized())
         return ESP_ERR_INVALID_STATE;
@@ -257,27 +257,41 @@ esp_err_t WiFiManager::connect(uint32_t timeout_ms)
     if (action == Action::SKIP)
         return ESP_OK;
 
-    Message msg = {};
-    msg.type = MessageType::COMMAND;
-    msg.cmd = CommandId::CONNECT;
+    const uint8_t total_attempts = max_retries + 1;
+    esp_err_t last_err = ESP_FAIL;
 
-    sync_manager_->clear_bits(CONNECTED_BIT | CONNECT_FAILED_BIT | INVALID_STATE_BIT);
-    esp_err_t err = post_message(msg, false);
-    if (err != ESP_OK)
-        return err;
+    for (uint8_t attempt = 1; attempt <= total_attempts; ++attempt) {
+        Message msg = {};
+        msg.type = MessageType::COMMAND;
+        msg.cmd = CommandId::CONNECT;
 
-    uint32_t bits = sync_manager_->wait_for_bits(CONNECTED_BIT | CONNECT_FAILED_BIT | INVALID_STATE_BIT, timeout_ms);
+        sync_manager_->clear_bits(CONNECTED_BIT | CONNECT_FAILED_BIT | INVALID_STATE_BIT);
+        esp_err_t err = post_message(msg, false);
+        if (err != ESP_OK)
+            return err;
 
-    if (bits & INVALID_STATE_BIT)
-        return ESP_ERR_INVALID_STATE;
-    if (bits & CONNECTED_BIT)
-        return ESP_OK;
-    else if (bits & CONNECT_FAILED_BIT)
-        return ESP_FAIL;
-    else {
-        disconnect();
-        return ESP_ERR_TIMEOUT;
+        uint32_t bits = sync_manager_->wait_for_bits(CONNECTED_BIT | CONNECT_FAILED_BIT | INVALID_STATE_BIT, timeout_ms);
+
+        if (bits & INVALID_STATE_BIT)
+            return ESP_ERR_INVALID_STATE;
+        if (bits & CONNECTED_BIT)
+            return ESP_OK;
+
+        if (bits & CONNECT_FAILED_BIT) {
+            last_err = ESP_FAIL;
+        }
+        else {
+            disconnect();
+            last_err = ESP_ERR_TIMEOUT;
+        }
+
+        if (attempt < total_attempts) {
+            disconnect(2000);
+            vTaskDelay(pdMS_TO_TICKS(base_delay_ms * attempt));
+        }
     }
+
+    return last_err;
 }
 
 esp_err_t WiFiManager::connect()

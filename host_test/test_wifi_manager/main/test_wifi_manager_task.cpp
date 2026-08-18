@@ -283,6 +283,85 @@ TEST_F(WiFiManagerTaskTest, ConnectSyncReturnsErrorWhenStorageIsInvalid)
     EXPECT_EQ(ESP_ERR_WIFI_PASSWORD, manager->connect(500));
 }
 
+TEST_F(WiFiManagerTaskTest, ConnectSyncWithRetriesSucceedsOnSecondAttempt)
+{
+    setup_and_init();
+
+    int connect_attempts = 0;
+    ON_CALL(*processor, process_message(Field(&wifi_manager::Message::cmd, CommandId::CONNECT), _))
+        .WillByDefault(Invoke([this, &connect_attempts](const wifi_manager::Message &, State) {
+            connect_attempts++;
+            if (connect_attempts == 1) {
+                xEventGroupSetBits(real_event_group, CONNECT_FAILED_BIT);
+            } else {
+                xEventGroupSetBits(real_event_group, CONNECTED_BIT);
+            }
+        }));
+
+    ON_CALL(*processor, process_message(Field(&wifi_manager::Message::cmd, CommandId::DISCONNECT), _))
+        .WillByDefault(Invoke([this](const wifi_manager::Message &, State) {
+            xEventGroupSetBits(real_event_group, DISCONNECTED_BIT);
+        }));
+
+    ON_CALL(*state_machine, validate_command(CommandId::CONNECT))
+        .WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
+    ON_CALL(*state_machine, validate_command(CommandId::DISCONNECT))
+        .WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
+
+    EXPECT_EQ(ESP_OK, manager->connect(200, 2, 10));
+    EXPECT_EQ(2, connect_attempts);
+}
+
+TEST_F(WiFiManagerTaskTest, ConnectSyncWithRetriesExhaustsAllAttemptsAndReturnsFail)
+{
+    setup_and_init();
+
+    int connect_attempts = 0;
+    ON_CALL(*processor, process_message(Field(&wifi_manager::Message::cmd, CommandId::CONNECT), _))
+        .WillByDefault(Invoke([this, &connect_attempts](const wifi_manager::Message &, State) {
+            connect_attempts++;
+            xEventGroupSetBits(real_event_group, CONNECT_FAILED_BIT);
+        }));
+
+    ON_CALL(*processor, process_message(Field(&wifi_manager::Message::cmd, CommandId::DISCONNECT), _))
+        .WillByDefault(Invoke([this](const wifi_manager::Message &, State) {
+            xEventGroupSetBits(real_event_group, DISCONNECTED_BIT);
+        }));
+
+    ON_CALL(*state_machine, validate_command(CommandId::CONNECT))
+        .WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
+    ON_CALL(*state_machine, validate_command(CommandId::DISCONNECT))
+        .WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
+
+    EXPECT_EQ(ESP_FAIL, manager->connect(100, 2, 10));
+    EXPECT_EQ(3, connect_attempts); // 1 initial + 2 retries = 3
+}
+
+TEST_F(WiFiManagerTaskTest, ConnectSyncWithRetriesTimesOutAndReturnsTimeout)
+{
+    setup_and_init();
+
+    int connect_attempts = 0;
+    ON_CALL(*processor, process_message(Field(&wifi_manager::Message::cmd, CommandId::CONNECT), _))
+        .WillByDefault(Invoke([this, &connect_attempts](const wifi_manager::Message &, State) {
+            connect_attempts++;
+            // do not set any bit -> trigger timeout
+        }));
+
+    ON_CALL(*processor, process_message(Field(&wifi_manager::Message::cmd, CommandId::DISCONNECT), _))
+        .WillByDefault(Invoke([this](const wifi_manager::Message &, State) {
+            xEventGroupSetBits(real_event_group, DISCONNECTED_BIT);
+        }));
+
+    ON_CALL(*state_machine, validate_command(CommandId::CONNECT))
+        .WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
+    ON_CALL(*state_machine, validate_command(CommandId::DISCONNECT))
+        .WillByDefault(Return(IWiFiStateMachine::Action::EXECUTE));
+
+    EXPECT_EQ(ESP_ERR_TIMEOUT, manager->connect(50, 1, 10));
+    EXPECT_EQ(2, connect_attempts); // 1 initial + 1 retry = 2
+}
+
 // =============================================================================
 // disconnect(timeout_ms) — sync variant
 // =============================================================================

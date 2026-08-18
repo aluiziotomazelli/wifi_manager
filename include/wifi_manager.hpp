@@ -100,9 +100,9 @@ public:
     esp_err_t stop() override;
 
     /**
-     * @copydoc IWiFiManager::connect(uint32_t)
+     * @copydoc IWiFiManager::connect(uint32_t, uint8_t, uint32_t)
      */
-    esp_err_t connect(uint32_t timeout_ms) override;
+    esp_err_t connect(uint32_t timeout_ms, uint8_t max_retries = 0, uint32_t base_delay_ms = 1500) override;
 
     /**
      * @copydoc IWiFiManager::connect()
